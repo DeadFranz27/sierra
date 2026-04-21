@@ -1,0 +1,37 @@
+# Secrets — never commit
+.env
+*.env
+!.env.example
+certs/
+!certs/.gitkeep
+
+# Local data (SQLite DB, runtime state)
+backend/data/
+*.db
+*.db-journal
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+
+# Node
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Docker / logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

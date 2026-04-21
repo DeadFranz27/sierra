@@ -1,0 +1,7 @@
+services:
+  mock-hub:
+    profiles: ["never"]
+
+  backend:
+    environment:
+      MOCK_MODE: "false"

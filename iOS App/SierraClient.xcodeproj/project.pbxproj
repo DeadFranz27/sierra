@@ -1,0 +1,474 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A001 /* SierraClientApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F001 /* SierraClientApp.swift */; };
+		A002 /* SierraClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F002 /* SierraClient.swift */; };
+		A003 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = F003 /* Models.swift */; };
+		A004 /* Keychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = F004 /* Keychain.swift */; };
+		A005 /* ConnectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F005 /* ConnectView.swift */; };
+		A006 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F006 /* DashboardView.swift */; };
+		A007 /* ZonesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F007 /* ZonesView.swift */; };
+		A008 /* ZoneDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F008 /* ZoneDetailView.swift */; };
+		A009 /* SchedulesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F009 /* SchedulesView.swift */; };
+		A010 /* ProfilesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F010 /* ProfilesView.swift */; };
+		A011 /* DeviceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F011 /* DeviceView.swift */; };
+		A012 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F012 /* SettingsView.swift */; };
+		A013 /* SoilSparkline.swift in Sources */ = {isa = PBXBuildFile; fileRef = F013 /* SoilSparkline.swift */; };
+		A014 /* WeatherBarChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = F014 /* WeatherBarChart.swift */; };
+		A015 /* MoistureBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F015 /* MoistureBar.swift */; };
+		A016 /* StatTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = F016 /* StatTile.swift */; };
+		A017 /* SierraLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F017 /* SierraLabel.swift */; };
+		A018 /* ZoneRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = F018 /* ZoneRow.swift */; };
+		A019 /* ProfileCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F019 /* ProfileCard.swift */; };
+		A020 /* PreviewData.swift in Sources */ = {isa = PBXBuildFile; fileRef = F020 /* PreviewData.swift */; };
+		A027 /* SierraFonts.swift in Sources */ = {isa = PBXBuildFile; fileRef = F027 /* SierraFonts.swift */; };
+		A028 /* FontDebug.swift in Sources */ = {isa = PBXBuildFile; fileRef = F028 /* FontDebug.swift */; };
+		A021 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F021 /* Assets.xcassets */; };
+		A022 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F022 /* Preview Assets.xcassets */; };
+		A023 /* InstrumentSerif-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F023 /* InstrumentSerif-Regular.ttf */; };
+		A024 /* InstrumentSerif-Italic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F024 /* InstrumentSerif-Italic.ttf */; };
+		A025 /* Manrope-Variable.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F025 /* Manrope-Variable.ttf */; };
+		A026 /* JetBrainsMono-Variable.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F026 /* JetBrainsMono-Variable.ttf */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		F001 /* SierraClientApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SierraClientApp.swift; sourceTree = "<group>"; };
+		F002 /* SierraClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SierraClient.swift; sourceTree = "<group>"; };
+		F003 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		F004 /* Keychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Keychain.swift; sourceTree = "<group>"; };
+		F005 /* ConnectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectView.swift; sourceTree = "<group>"; };
+		F006 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		F007 /* ZonesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZonesView.swift; sourceTree = "<group>"; };
+		F008 /* ZoneDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZoneDetailView.swift; sourceTree = "<group>"; };
+		F009 /* SchedulesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchedulesView.swift; sourceTree = "<group>"; };
+		F010 /* ProfilesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilesView.swift; sourceTree = "<group>"; };
+		F011 /* DeviceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceView.swift; sourceTree = "<group>"; };
+		F012 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		F013 /* SoilSparkline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoilSparkline.swift; sourceTree = "<group>"; };
+		F014 /* WeatherBarChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherBarChart.swift; sourceTree = "<group>"; };
+		F015 /* MoistureBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoistureBar.swift; sourceTree = "<group>"; };
+		F016 /* StatTile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatTile.swift; sourceTree = "<group>"; };
+		F017 /* SierraLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SierraLabel.swift; sourceTree = "<group>"; };
+		F018 /* ZoneRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZoneRow.swift; sourceTree = "<group>"; };
+		F019 /* ProfileCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileCard.swift; sourceTree = "<group>"; };
+		F020 /* PreviewData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewData.swift; sourceTree = "<group>"; };
+		F029 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		F021 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		F022 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		F023 /* InstrumentSerif-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "InstrumentSerif-Regular.ttf"; sourceTree = "<group>"; };
+		F024 /* InstrumentSerif-Italic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "InstrumentSerif-Italic.ttf"; sourceTree = "<group>"; };
+		F025 /* Manrope-Variable.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-Variable.ttf"; sourceTree = "<group>"; };
+		F026 /* JetBrainsMono-Variable.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "JetBrainsMono-Variable.ttf"; sourceTree = "<group>"; };
+		F027 /* SierraFonts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SierraFonts.swift; sourceTree = "<group>"; };
+		F028 /* FontDebug.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FontDebug.swift; sourceTree = "<group>"; };
+		FAPP /* SierraClient.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SierraClient.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		BP01 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		GR00 /* root */ = {
+			isa = PBXGroup;
+			children = (
+				GR01 /* SierraClient */,
+				GR99 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		GR99 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				FAPP /* SierraClient.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		GR01 /* SierraClient */ = {
+			isa = PBXGroup;
+			children = (
+				F001 /* SierraClientApp.swift */,
+				GR02 /* Networking */,
+				GR03 /* Screens */,
+				GR04 /* Components */,
+				GR05 /* Resources */,
+				GR06 /* Preview Content */,
+			);
+			path = SierraClient;
+			sourceTree = "<group>";
+		};
+		GR02 /* Networking */ = {
+			isa = PBXGroup;
+			children = (
+				F002 /* SierraClient.swift */,
+				F003 /* Models.swift */,
+				F004 /* Keychain.swift */,
+			);
+			path = Networking;
+			sourceTree = "<group>";
+		};
+		GR03 /* Screens */ = {
+			isa = PBXGroup;
+			children = (
+				F005 /* ConnectView.swift */,
+				F006 /* DashboardView.swift */,
+				F007 /* ZonesView.swift */,
+				F008 /* ZoneDetailView.swift */,
+				F009 /* SchedulesView.swift */,
+				F010 /* ProfilesView.swift */,
+				F011 /* DeviceView.swift */,
+				F012 /* SettingsView.swift */,
+			);
+			path = Screens;
+			sourceTree = "<group>";
+		};
+		GR04 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				F013 /* SoilSparkline.swift */,
+				F014 /* WeatherBarChart.swift */,
+				F015 /* MoistureBar.swift */,
+				F016 /* StatTile.swift */,
+				F017 /* SierraLabel.swift */,
+				F018 /* ZoneRow.swift */,
+				F019 /* ProfileCard.swift */,
+				F027 /* SierraFonts.swift */,
+				F028 /* FontDebug.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		GR05 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				F029 /* Info.plist */,
+				F021 /* Assets.xcassets */,
+				GR07 /* Fonts */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		GR07 /* Fonts */ = {
+			isa = PBXGroup;
+			children = (
+				F023 /* InstrumentSerif-Regular.ttf */,
+				F024 /* InstrumentSerif-Italic.ttf */,
+				F025 /* Manrope-Variable.ttf */,
+				F026 /* JetBrainsMono-Variable.ttf */,
+			);
+			path = Fonts;
+			sourceTree = "<group>";
+		};
+		GR06 /* Preview Content */ = {
+			isa = PBXGroup;
+			children = (
+				F020 /* PreviewData.swift */,
+				F022 /* Preview Assets.xcassets */,
+			);
+			name = "Preview Content";
+			path = "Preview Content";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		TGT1 /* SierraClient */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BCL1 /* Build configuration list for PBXNativeTarget */;
+			buildPhases = (
+				BP00 /* Sources */,
+				BP01 /* Frameworks */,
+				BP02 /* Resources */,
+			);
+			buildRules = ();
+			dependencies = ();
+			name = SierraClient;
+			productName = SierraClient;
+			productReference = FAPP /* SierraClient.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		PROJ /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2600;
+				LastUpgradeCheck = 2600;
+				TargetAttributes = {
+					TGT1 = {
+						CreatedOnToolsVersion = 26.0;
+					};
+				};
+			};
+			buildConfigurationList = BCL0 /* Build configuration list for PBXProject */;
+			compatibilityVersion = "Xcode 15.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = GR00;
+			productRefGroup = GR99 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				TGT1 /* SierraClient */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		BP02 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A021 /* Assets.xcassets in Resources */,
+				A022 /* Preview Assets.xcassets in Resources */,
+				A023 /* InstrumentSerif-Regular.ttf in Resources */,
+				A024 /* InstrumentSerif-Italic.ttf in Resources */,
+				A025 /* Manrope-Variable.ttf in Resources */,
+				A026 /* JetBrainsMono-Variable.ttf in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		BP00 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A001 /* SierraClientApp.swift in Sources */,
+				A002 /* SierraClient.swift in Sources */,
+				A003 /* Models.swift in Sources */,
+				A004 /* Keychain.swift in Sources */,
+				A005 /* ConnectView.swift in Sources */,
+				A006 /* DashboardView.swift in Sources */,
+				A007 /* ZonesView.swift in Sources */,
+				A008 /* ZoneDetailView.swift in Sources */,
+				A009 /* SchedulesView.swift in Sources */,
+				A010 /* ProfilesView.swift in Sources */,
+				A011 /* DeviceView.swift in Sources */,
+				A012 /* SettingsView.swift in Sources */,
+				A013 /* SoilSparkline.swift in Sources */,
+				A014 /* WeatherBarChart.swift in Sources */,
+				A015 /* MoistureBar.swift in Sources */,
+				A016 /* StatTile.swift in Sources */,
+				A017 /* SierraLabel.swift in Sources */,
+				A018 /* ZoneRow.swift in Sources */,
+				A019 /* ProfileCard.swift in Sources */,
+				A020 /* PreviewData.swift in Sources */,
+				A027 /* SierraFonts.swift in Sources */,
+				A028 /* FontDebug.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		BC00 /* Debug - Project */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		BC01 /* Release - Project */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		BC10 /* Debug - Target */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"SierraClient/Preview Content\"";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "SierraClient/Resources/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.francescotroian.SierraClient";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		BC11 /* Release - Target */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"SierraClient/Preview Content\"";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "SierraClient/Resources/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.francescotroian.SierraClient";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		BCL0 /* Build configuration list for PBXProject */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BC00 /* Debug */,
+				BC01 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		BCL1 /* Build configuration list for PBXNativeTarget */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BC10 /* Debug */,
+				BC11 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+	};
+	rootObject = PROJ /* Project object */;
+}

@@ -1,0 +1,84 @@
+/* Sierra — Design Tokens */
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  /* Moss — primary greens */
+  --moss-950:#0F1A13; --moss-900:#1B2A20; --moss-800:#24382B;
+  --moss-700:#2F4A36; --moss-600:#3E5F46; --moss-500:#4E7A5C;
+  --moss-400:#6B9679; --moss-300:#8CB098; --moss-200:#B4CEBC;
+  --moss-100:#D7E3D9; --moss-50:#EDF2EC;
+
+  --fern-700:#3D6149; --fern-600:#406650; --fern-500:#4E7A5C;
+  --fern-400:#6B9679; --fern-300:#8CB098;
+
+  --sage-500:#9CB9A3; --sage-300:#B8CDBC; --sage-100:#D9E4D6;
+  --mist-500:#E4ECDF; --mist-300:#EEF3EA; --mist-100:#F4F7F1;
+
+  /* Stone — warm neutrals */
+  --stone-950:#1B1915; --stone-900:#2A2722; --stone-800:#3D3A33;
+  --stone-700:#555148; --stone-600:#6E695F; --stone-500:#8A8578;
+  --stone-400:#A8A396; --stone-300:#C7C1B3; --stone-200:#DDD7C8;
+  --stone-100:#ECE7DA; --stone-50:#F6F2EB;
+
+  /* Accents */
+  --water-500:#4E7A8C; --water-300:#8AA9B6; --water-100:#DDE6EB;
+  --amber-500:#C08A3E; --amber-300:#DDB277; --amber-100:#F3E5CC;
+  --clay-500:#A24B3B;  --clay-300:#C78576;  --clay-100:#EDD2CB;
+
+  /* Semantic */
+  --bg:var(--stone-50); --bg-elevated:#FBF9F4; --bg-sunken:var(--stone-100);
+  --bg-inverse:var(--moss-900); --bg-tint-green:var(--mist-300);
+  --fg:var(--stone-900); --fg-muted:var(--stone-600); --fg-subtle:var(--stone-500);
+  --fg-inverse:var(--stone-50); --fg-brand:var(--moss-700); --fg-link:var(--fern-600);
+  --border:var(--stone-200); --border-strong:var(--stone-300);
+  --border-brand:var(--moss-300); --border-focus:var(--fern-500);
+  --accent:var(--fern-500); --accent-hover:var(--fern-600); --accent-press:var(--fern-700);
+  --state-good:var(--fern-500); --state-warn:var(--amber-500);
+  --state-bad:var(--clay-500); --state-info:var(--water-500);
+
+  /* Type */
+  --font-display:'Instrument Serif', Georgia, serif;
+  --font-sans:'Manrope', system-ui, sans-serif;
+  --font-mono:'JetBrains Mono', ui-monospace, monospace;
+  --text-xs:12px; --text-sm:13px; --text-base:15px; --text-md:17px;
+  --text-lg:20px; --text-xl:24px; --text-2xl:32px; --text-3xl:44px;
+  --text-4xl:60px; --text-5xl:84px;
+  --lh-tight:1.08; --lh-snug:1.25; --lh-body:1.5; --lh-loose:1.7;
+  --tracking-tight:-0.02em; --tracking-normal:0; --tracking-eyebrow:0.14em;
+
+  /* Spacing */
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
+  --space-5:20px; --space-6:24px; --space-7:32px; --space-8:40px;
+  --space-9:48px; --space-10:56px; --space-12:72px; --space-16:96px;
+
+  /* Radii */
+  --rad-xs:4px; --rad-sm:8px; --rad-md:12px; --rad-lg:16px;
+  --rad-xl:20px; --rad-2xl:28px; --rad-pill:999px;
+
+  /* Shadow */
+  --elev-0:none;
+  --elev-1:0 1px 2px rgba(27,25,21,.04), 0 2px 6px rgba(27,25,21,.05);
+  --elev-2:0 2px 4px rgba(27,25,21,.05), 0 8px 18px rgba(27,25,21,.07);
+  --elev-3:0 4px 8px rgba(27,25,21,.06), 0 18px 40px rgba(27,25,21,.10);
+  --focus-ring:0 0 0 3px rgba(78,122,92,.24);
+
+  /* Motion */
+  --ease-standard:cubic-bezier(.22,.61,.36,1);
+  --ease-data:cubic-bezier(.65,0,.35,1);
+  --dur-micro:120ms; --dur-base:220ms; --dur-emphasis:420ms;
+}
+
+body.sierra, .sierra {
+  font-family:var(--font-sans); font-size:var(--text-base);
+  line-height:var(--lh-body); color:var(--fg); background:var(--bg);
+  -webkit-font-smoothing:antialiased;
+}
+.sierra h1,.sierra .h1{font-family:var(--font-display);font-weight:400;font-size:var(--text-4xl);line-height:var(--lh-tight);letter-spacing:var(--tracking-tight);color:var(--fg-brand);margin:0;}
+.sierra h2,.sierra .h2{font-family:var(--font-display);font-weight:400;font-size:var(--text-3xl);line-height:var(--lh-snug);letter-spacing:var(--tracking-tight);color:var(--fg-brand);margin:0;}
+.sierra h3,.sierra .h3{font-family:var(--font-sans);font-weight:600;font-size:var(--text-xl);line-height:var(--lh-snug);color:var(--fg);margin:0;}
+.sierra p,.sierra .p{font-family:var(--font-sans);font-size:var(--text-base);line-height:var(--lh-body);color:var(--fg);margin:0;}
+.sierra .lead{font-family:var(--font-sans);font-size:var(--text-md);line-height:var(--lh-body);color:var(--fg-muted);}
+.sierra .eyebrow{font-family:var(--font-sans);font-size:var(--text-xs);font-weight:600;letter-spacing:var(--tracking-eyebrow);text-transform:uppercase;color:var(--fg-muted);}
+.sierra .caption{font-family:var(--font-sans);font-size:var(--text-sm);color:var(--fg-muted);}
+.sierra .mono,.sierra code{font-family:var(--font-mono);font-size:var(--text-sm);}
+.sierra a{color:var(--fg-link);text-decoration:underline;text-underline-offset:3px;}

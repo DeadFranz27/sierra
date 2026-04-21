@@ -1,0 +1,14 @@
+{
+  "name": "network_flaky",
+  "description": "Hub drops MQTT every few minutes — tests offline handling in the UI.",
+  "initial_moisture": 50.0,
+  "weather": {
+    "condition": "cloudy",
+    "temp_c": 20.0,
+    "rain_forecast_mm": 0.0,
+    "is_night": false
+  },
+  "time_scale": 1,
+  "sensor_fail": false,
+  "network_fail": true
+}

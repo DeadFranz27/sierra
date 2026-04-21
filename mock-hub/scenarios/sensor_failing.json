@@ -1,0 +1,14 @@
+{
+  "name": "sensor_failing",
+  "description": "Sensor returns a frozen value then stops publishing — tests UI error states.",
+  "initial_moisture": 48.0,
+  "weather": {
+    "condition": "sunny",
+    "temp_c": 22.0,
+    "rain_forecast_mm": 0.0,
+    "is_night": false
+  },
+  "time_scale": 1,
+  "sensor_fail": true,
+  "network_fail": false
+}
