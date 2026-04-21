@@ -1,126 +1,127 @@
 # Sierra
 
-**Smart irrigation that waters when plants need it — not when a timer says so.**
-
-Sierra runs on a Raspberry Pi on your home network. It talks to ESPHome-based moisture sensors and valves over MQTT, checks the weather, and decides per-zone whether to water today. You manage everything from a web UI on any phone or laptop on the same Wi-Fi.
+> **v0.1.0 — demo release.** Sierra is a proof-of-concept smart irrigation system. By default it runs in **demo mode** with simulated zones and weather, so you can try the whole UX without any hardware. Real-hardware mode is supported via a flag, but the ESPHome firmware is still in progress — see [Real mode](#real-mode) below.
 
 ---
 
-## Install it in one command
+Sierra waters your plants only when they actually need it. It runs on a Raspberry Pi on your home network, reads moisture sensors, checks the weather, and decides per-zone whether to water today. You manage everything from a web UI on any phone or laptop on the same Wi-Fi.
 
-You need:
+## Install in one command
 
-- A Raspberry Pi 4 or 5 with **Raspberry Pi OS (64-bit)** flashed and booted
-- SSH enabled, connected to your Wi-Fi
-- A GitHub **fine-grained Personal Access Token** with `Contents: Read` on this repo
-  *(see [docs/RASPBERRY_PI.md](docs/RASPBERRY_PI.md) for the 30-second walkthrough)*
-
-Then from your Mac:
+On a fresh Raspberry Pi (64-bit Pi OS, SSH enabled, on your Wi-Fi):
 
 ```sh
-scp scripts/bootstrap.sh pi@raspberrypi.local:~/
-ssh pi@raspberrypi.local
-sudo REPO=DeadFranz27/sierra ~/bootstrap.sh
+curl -fsSL https://raw.githubusercontent.com/DeadFranz27/sierra/main/install.sh | sudo bash
 ```
 
-Paste the PAT when prompted. Go make a coffee — 5 to 10 minutes on a Pi 4.
+That's it. The installer:
 
-When it's done, the installer prints a URL like:
+1. Installs Docker if missing
+2. Clones Sierra into `~/sierra`
+3. Generates random secrets and a self-signed TLS certificate
+4. Builds and starts the stack
+5. Registers a `systemd` service so Sierra starts at every boot
+6. Prints the LAN URL and where to find the demo password
 
+First run takes 5–10 minutes on a Pi 4. After that, the Pi just works — unplug it, plug it back in, Sierra is up again.
+
+### Already cloned the repo?
+
+```sh
+cd sierra
+sudo ./install.sh
 ```
-  Sierra is running.
-  Open: https://raspberrypi.local/
-```
 
-Open it on your phone. Browser warns about the self-signed cert — accept once.
-
----
+Same result, no re-clone.
 
 ## First login
 
-The installer also prints demo credentials — something like:
+When the installer finishes it prints something like:
 
 ```
-  Sierra demo credentials
-  Username : demo
-  Password : Xq7k-2nvB-Rt91
+  Open the UI:  https://raspberrypi.local/
 ```
 
-Log in. You'll land in the **setup wizard**, which walks you through:
+Open that on your phone. Your browser warns about the self-signed certificate — accept it once, then log in with the demo password. Find it with:
 
-1. Naming your zones (e.g. *Vegetable patch*, *Rose border*)
-2. Picking a plant profile for each (tomato, lawn, herbs, ornamental, …)
-3. Optionally: setting your location so weather-aware skipping works
-4. Adding hardware — if you're running in mock mode you can skip this and play with simulated zones first
+```sh
+docker compose -f ~/sierra/docker-compose.yml logs backend | grep -A2 "demo credentials"
+```
 
-That's it. Sierra will now water each zone only when it's actually dry, skip if it rained or is about to, and leave a readable log of what it did and why.
+You'll land in the **setup wizard**: name your zones, pick a plant profile for each (tomato, lawn, herbs, ornamental…), optionally set your location so weather-based skipping works. Demo mode lets you click through without hardware attached.
 
----
-
-## Hostname on the network
-
-Raspberry Pi OS ships with mDNS enabled, so the Pi is reachable on your LAN at **`<hostname>.local`** — whatever you named it during `rpi-imager` setup. Default is `raspberrypi.local`.
-
-If `.local` doesn't resolve from your phone (some Android builds don't speak mDNS), fall back to the Pi's LAN IP — the installer prints it at the end.
-
----
-
-## What runs on the Pi
-
-| Container     | Purpose                                            |
-|---------------|----------------------------------------------------|
-| `frontend`    | nginx serving the React UI over HTTPS (port 443)   |
-| `backend`     | FastAPI — API, scheduler, MQTT bridge, onboarding  |
-| `mosquitto`   | MQTT broker — ESPHome devices talk to this         |
-| `mock-hub`    | Simulated sensors/valves for demo mode             |
-
-All orchestrated by `docker-compose`, brought up by `systemd` at boot.
-
----
+If `raspberrypi.local` doesn't resolve from your phone (some Android builds skip mDNS), use the LAN IP that the installer prints instead.
 
 ## Modes
 
-**Mock mode (default)** — simulated zones, simulated weather. You can click around the entire app without plugging in any hardware. Perfect for a demo or for trying profiles.
+### Demo mode *(default)*
 
-**Real hardware mode** — run the installer with `--real-hw`. Sierra expects ESPHome devices announcing themselves over mDNS and publishing to the MQTT topic contract documented in `docs/`.
-
-Switch between them anytime:
+Simulated sensors and zones, fake weather. Perfect for understanding what Sierra does before buying hardware. Everything the UI shows is driven by a small mock service — watering events are virtual.
 
 ```sh
-cd ~/sierra
-sudo ./scripts/install.sh --real-hw   # or re-run without flags to go back to mock
+sudo ./install.sh            # or the curl one-liner above
 ```
 
-Your zones and history are preserved — only the data source changes.
+### Real mode
 
----
+Talks to real ESPHome-based moisture sensors and valves over MQTT.
+
+```sh
+sudo ./install.sh --real-hw
+```
+
+**Status:** the backend + MQTT plumbing is ready, but the **ESPHome firmware** (YAML + flashing guide) is not shipped in v0.1.0. You can connect your own ESPHome devices today if they publish to the topic contract documented in `docs/` — we'll ship turnkey firmware in a future release.
+
+Switching modes later preserves your database — your zones, profiles, and history all survive.
 
 ## Day-to-day
 
 ```sh
-# Is it running?
+# is it running?
 sudo systemctl status sierra
 
-# Stop / start
+# stop / start / restart
 sudo systemctl stop sierra
 sudo systemctl start sierra
+sudo systemctl restart sierra
 
-# Tail the logs
+# tail the logs
 docker compose -f ~/sierra/docker-compose.yml logs -f
 
-# Pull the latest code and restart
+# update to the latest version
 cd ~/sierra && git pull && sudo systemctl restart sierra
 ```
 
----
+## What's inside
 
-## Deeper docs
+| Component    | Role                                                      |
+|--------------|-----------------------------------------------------------|
+| `frontend`   | nginx serving the React UI over HTTPS                     |
+| `backend`    | FastAPI — API, scheduler, MQTT bridge, onboarding          |
+| `mosquitto`  | MQTT broker — ESPHome devices publish here                |
+| `mock-hub`   | Simulated sensors/valves for demo mode                    |
 
-- **[docs/RASPBERRY_PI.md](docs/RASPBERRY_PI.md)** — full Pi installer reference, PAT rotation, troubleshooting
-- **[docs/SECURITY.md](docs/SECURITY.md)** — threat model, secret handling, TLS
+All containers are managed by `docker compose` and supervised by the `sierra.service` systemd unit.
 
----
+## Flags
+
+| Flag              | Meaning                                                 |
+|-------------------|---------------------------------------------------------|
+| *(none)*          | Demo mode — simulated zones and sensors                 |
+| `--real-hw`       | Real ESPHome hardware; exposes MQTT on the LAN          |
+| `--no-autostart`  | Skip systemd registration                               |
+| `--branch=NAME`   | Install from a non-default branch                       |
+| `--dir=PATH`      | Install into a custom directory                         |
+
+## Versioning
+
+Sierra follows [Semantic Versioning](https://semver.org/). The current release is noted at the top of this file and in `VERSION`. Changes are tracked in [CHANGELOG.md](CHANGELOG.md).
 
 ## Philosophy
 
 One command to install. One URL to open. One password to remember. Everything else Sierra figures out on its own.
+
+## More docs
+
+- [CHANGELOG.md](CHANGELOG.md) — release history
+- [docs/SECURITY.md](docs/SECURITY.md) — threat model, secret handling
