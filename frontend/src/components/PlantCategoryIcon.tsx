@@ -3,6 +3,7 @@
  * Each SVG uses currentColor-compatible stroke values mapped to brand tokens.
  * Size default: 32px (viewBox 48×48, scaled).
  */
+import type { ReactElement } from 'react'
 
 type Props = { size?: number; className?: string }
 
@@ -163,7 +164,7 @@ export type PlantCategory =
   | 'Tropical & Indoor'
   | string
 
-const ICON_MAP: Record<string, (props: Props) => JSX.Element> = {
+const ICON_MAP: Record<string, (props: Props) => ReactElement> = {
   'Lawn & Ground Cover':   IconLawn,
   'Vegetables':            IconVegetables,
   'Herbs':                 IconHerbs,

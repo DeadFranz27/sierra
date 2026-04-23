@@ -15,7 +15,7 @@
 #
 set -euo pipefail
 
-SIERRA_VERSION="0.1.0"
+SIERRA_VERSION="0.1.3"
 DEFAULT_REPO="DeadFranz27/sierra"
 
 # ── flags ──────────────────────────────────────────────────────────────────────
@@ -67,13 +67,25 @@ case "$(uname -m)" in
     *)               die "Unsupported architecture: $(uname -m)" ;;
 esac
 
-# ── 1. base packages ───────────────────────────────────────────────────────────
+# ── 1. network + base packages ─────────────────────────────────────────────────
 step "Base packages"
+
+# Fail early if the Pi has no internet — every subsequent step needs it.
+if ! curl -fsS --max-time 10 -o /dev/null https://github.com; then
+    die "No internet on this host. Check Wi-Fi / Ethernet and DNS, then re-run.
+         Quick test:  ping -c1 8.8.8.8  &&  nslookup github.com"
+fi
+ok "Internet reachable"
+
 APT_UPDATED=0
 apt_update_once() { [ "$APT_UPDATED" -eq 0 ] && apt-get update -qq && APT_UPDATED=1; }
 
 for pkg in git curl ca-certificates openssl; do
-    command -v "$pkg" >/dev/null 2>&1 || { apt_update_once; apt-get install -y --no-install-recommends "$pkg"; }
+    if ! command -v "$pkg" >/dev/null 2>&1; then
+        apt_update_once
+        apt-get install -y --no-install-recommends "$pkg" \
+            || die "Failed to install $pkg. Is this a Debian-based system?"
+    fi
 done
 ok "git, curl, openssl ready"
 
@@ -119,22 +131,101 @@ if command -v docker >/dev/null 2>&1; then
     ok "Docker present ($(docker --version | awk '{print $3}' | tr -d ,))"
 else
     warn "Installing Docker via get.docker.com (a few minutes)"
-    curl -fsSL https://get.docker.com | sh
-    ok "Docker installed"
+    # Fetch first, then run — so a network failure is caught explicitly.
+    DOCKER_INSTALLER="$(mktemp)"
+    if ! curl -fsSL -o "$DOCKER_INSTALLER" https://get.docker.com; then
+        rm -f "$DOCKER_INSTALLER"
+        die "Could not download Docker installer. Check the Pi's internet connection:
+         curl -v https://get.docker.com"
+    fi
+    sh "$DOCKER_INSTALLER" || { rm -f "$DOCKER_INSTALLER"; die "Docker install script failed. Re-run with 'sudo bash install.sh' and read the output above."; }
+    rm -f "$DOCKER_INSTALLER"
+
+    # Verify it actually worked.
+    if ! command -v docker >/dev/null 2>&1; then
+        die "Docker install reported success but 'docker' is not on PATH. Try:
+         sudo apt-get install -y docker.io docker-compose-plugin"
+    fi
+    ok "Docker installed ($(docker --version | awk '{print $3}' | tr -d ,))"
 fi
 
-if docker compose version >/dev/null 2>&1; then
-    ok "Compose plugin ready"
-else
+# Compose v2 plugin — three-tier install: apt → Docker repo → GitHub binary.
+# The GitHub-binary fallback works on any Debian release, including ones newer than
+# what download.docker.com has indexed (seen on Debian 13 trixie early 2026).
+install_compose_plugin() {
+    # Tier 1: apt (works if docker.io or docker-ce already brought the plugin in)
     apt_update_once
-    apt-get install -y docker-compose-plugin
-fi
+    if apt-get install -y docker-compose-plugin >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+        return 0
+    fi
 
+    # Tier 2: add Docker's official repo, try again. Works when apt knows the codename.
+    local codename
+    codename="$(. /etc/os-release && echo "${VERSION_CODENAME:-}")"
+    if [ -n "$codename" ] && ! [ -f /etc/apt/sources.list.d/docker.list ]; then
+        install -m 0755 -d /etc/apt/keyrings
+        curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc 2>/dev/null || \
+        curl -fsSL https://download.docker.com/linux/raspbian/gpg -o /etc/apt/keyrings/docker.asc 2>/dev/null || true
+        chmod a+r /etc/apt/keyrings/docker.asc 2>/dev/null || true
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian $codename stable" \
+            > /etc/apt/sources.list.d/docker.list
+        apt-get update -qq 2>/dev/null || true
+        if apt-get install -y docker-compose-plugin >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+            return 0
+        fi
+        # Tier 2 failed — probably because trixie (or similar) isn't yet in download.docker.com.
+        # Remove the list so apt-update doesn't keep failing on subsequent runs.
+        rm -f /etc/apt/sources.list.d/docker.list
+    fi
+
+    # Tier 3: drop the compose binary into the CLI-plugins dir. Works offline-ish
+    # (one GitHub download), independent of the distro.
+    warn "Falling back to GitHub binary for docker-compose-plugin"
+    local arch compose_version plugins_dir
+    arch="$(uname -m)"
+    case "$arch" in
+        aarch64|arm64)  arch="aarch64" ;;
+        armv7l|armhf)   arch="armv7" ;;
+        x86_64|amd64)   arch="x86_64" ;;
+        *) die "Unsupported arch for compose binary fallback: $arch" ;;
+    esac
+    compose_version="v2.32.4"
+    plugins_dir="/usr/local/lib/docker/cli-plugins"
+    mkdir -p "$plugins_dir"
+    if ! curl -fsSL -o "$plugins_dir/docker-compose" \
+        "https://github.com/docker/compose/releases/download/${compose_version}/docker-compose-linux-${arch}"; then
+        die "Could not download docker compose binary from GitHub. Check connectivity:
+         curl -v https://github.com/docker/compose/releases/"
+    fi
+    chmod +x "$plugins_dir/docker-compose"
+    docker compose version >/dev/null 2>&1 \
+        || die "Installed compose binary but 'docker compose' still fails. Check $plugins_dir/docker-compose."
+    return 0
+}
+
+if ! docker compose version >/dev/null 2>&1; then
+    warn "Compose plugin missing — installing"
+    install_compose_plugin
+fi
+ok "Compose plugin ready ($(docker compose version --short))"
+
+# Start the Docker daemon (fresh installs have it disabled on some images).
 systemctl enable --now docker >/dev/null 2>&1 || true
+if ! systemctl is-active --quiet docker; then
+    die "Docker daemon is not running. Check:
+         sudo systemctl status docker
+         sudo journalctl -u docker -n 50"
+fi
+ok "Docker daemon is running"
+
+# Prove the daemon actually accepts commands as root.
+if ! docker info >/dev/null 2>&1; then
+    die "'docker info' failed. The daemon might still be initializing — wait 10s and re-run."
+fi
 
 if ! getent group docker | grep -q "\b$TARGET_USER\b"; then
     usermod -aG docker "$TARGET_USER"
-    warn "Added $TARGET_USER to the 'docker' group — log out + back in for it to take effect in your shell."
+    warn "Added $TARGET_USER to the 'docker' group — log out + back in for your shell to pick it up."
 fi
 
 # ── 4. .env ────────────────────────────────────────────────────────────────────
@@ -216,8 +307,13 @@ if [ "$REAL_HW" -eq 1 ] && [ -f "$TARGET_DIR/docker-compose.real.yml" ]; then
     COMPOSE_FILES+=(-f "$TARGET_DIR/docker-compose.real.yml")
 fi
 
-sudo -u "$TARGET_USER" docker compose "${COMPOSE_FILES[@]}" --project-directory "$TARGET_DIR" build
-sudo -u "$TARGET_USER" docker compose "${COMPOSE_FILES[@]}" --project-directory "$TARGET_DIR" up -d
+# Run compose as root — the image + volume ownership ends up fine because the containers
+# themselves drop privileges inside, and this sidesteps the "user was just added to the
+# docker group but the new group isn't active yet in this session" trap.
+docker compose "${COMPOSE_FILES[@]}" --project-directory "$TARGET_DIR" build \
+    || die "docker compose build failed. Scroll up for the actual error."
+docker compose "${COMPOSE_FILES[@]}" --project-directory "$TARGET_DIR" up -d \
+    || die "docker compose up failed. Check: docker compose -f $TARGET_DIR/docker-compose.yml ps"
 
 # ── 7. health check ────────────────────────────────────────────────────────────
 step "Waiting for backend"

@@ -84,9 +84,11 @@ export type DeviceCandidate = {
   kind: 'sense' | 'valve'
   mac: string
   ip: string
-  hostname: string
+  port: number | null
+  hostname: string | null
   firmware_version: string | null
   announced_at: string
+  last_seen_at: string
   claimed_at: string | null
   expires_at: string
 }
