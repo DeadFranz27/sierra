@@ -15,7 +15,7 @@
 #
 set -euo pipefail
 
-SIERRA_VERSION="0.1.4"
+SIERRA_VERSION="0.1.5"
 DEFAULT_REPO="DeadFranz27/sierra"
 
 # ── flags ──────────────────────────────────────────────────────────────────────

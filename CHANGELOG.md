@@ -3,6 +3,12 @@
 All notable changes to Sierra will be documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.1.5] — 2026-04-23
+
+### Fixed
+
+- Frontend container was stuck in a restart loop with `open() "/var/run/nginx.pid" failed (13: Permission denied)`. The previous Dockerfile forced nginx to run as an unprivileged user, but that user couldn't bind to ports 80/443 (privileged on Linux) or write the pid file to the tmpfs-backed `/var/run`. Fix: removed the explicit `USER sierra` line — nginx now runs as its image default (root inside the container, which is isolated from the host). Resolves the restart loop and makes the UI actually reachable.
+
 ## [0.1.4] — 2026-04-23
 
 ### Fixed

@@ -1,6 +1,6 @@
 # Sierra
 
-> **v0.1.4 — demo release.** Sierra is a proof-of-concept smart irrigation system. By default it runs in **demo mode** with simulated zones and weather, so you can try the whole UX without any hardware. Real-hardware mode is supported via a flag, but the ESPHome firmware is still in progress — see [Real mode](#real-mode) below.
+> **v0.1.5 — demo release.** Sierra is a proof-of-concept smart irrigation system. By default it runs in **demo mode** with simulated zones and weather, so you can try the whole UX without any hardware. Real-hardware mode is supported via a flag, but the ESPHome firmware is still in progress — see [Real mode](#real-mode) below.
 
 ---
 
