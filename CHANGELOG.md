@@ -3,6 +3,12 @@
 All notable changes to Sierra will be documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.1.4] — 2026-04-23
+
+### Fixed
+
+- Backend container was stuck in a restart loop on first boot with `sqlite3.OperationalError: unable to open database file`. Root cause: the Dockerfile switched to the unprivileged `sierra` user before `/app/data` existed, so when Docker's named `sierra_db` volume mounted on top it inherited root ownership and the process couldn't write the SQLite file. Fix: create `/app/data` with `sierra:sierra` ownership **before** `USER sierra` so the named volume inherits the right permissions on first mount.
+
 ## [0.1.3] — 2026-04-23
 
 ### Fixed
