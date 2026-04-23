@@ -7,6 +7,7 @@ import type { Route } from './lib/router'
 import { Layout } from './components/Layout'
 import { ToastContainer } from './components/Toast'
 import { LoginScreen } from './screens/LoginScreen'
+import { OnboardingScreen } from './screens/OnboardingScreen'
 import { DashboardScreen } from './screens/DashboardScreen'
 import { ZonesScreen } from './screens/ZonesScreen'
 import { ZoneDetailScreen } from './screens/ZoneDetailScreen'
@@ -14,12 +15,14 @@ import { ScheduleScreen } from './screens/ScheduleScreen'
 import { ProfilesScreen } from './screens/ProfilesScreen'
 import { DeviceScreen } from './screens/DeviceScreen'
 import { MockControlScreen } from './screens/MockControlScreen'
+import { useOnboarding } from './hooks/useOnboarding'
 
 const MOCK_MODE = import.meta.env.VITE_MOCK_MODE !== 'false'
 
 export default function App() {
   const [authed, setAuthed] = useState<boolean | null>(null)
   const [route, setRoute] = useState<Route>(() => parsePath(window.location.pathname))
+  const { state: onboardingState, refresh: refreshOnboarding } = useOnboarding(authed === true)
 
   useEffect(() => {
     const onPop = () => setRoute(parsePath(window.location.pathname))
@@ -58,6 +61,28 @@ export default function App() {
           setAuthed(true)
           navigate({ page: 'dashboard' })
         }} />
+      </div>
+    )
+  }
+
+  if (onboardingState.status === 'loading') {
+    return (
+      <div className="sierra" style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-muted)', fontFamily: 'var(--font-sans)' }}>
+        Loading…
+      </div>
+    )
+  }
+
+  if (onboardingState.status === 'ready' && !onboardingState.progress.is_complete) {
+    return (
+      <div className="sierra">
+        <OnboardingScreen
+          initialProgress={onboardingState.progress}
+          onComplete={() => {
+            refreshOnboarding()
+            navigate({ page: 'dashboard' })
+          }}
+        />
       </div>
     )
   }

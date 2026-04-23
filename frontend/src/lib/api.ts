@@ -111,6 +111,15 @@ export type HubLocation = {
   longitude: number
 }
 
+export type OnboardingProgress = {
+  id: string
+  current_step: number
+  state_snapshot: Record<string, unknown> | null
+  started_at: string
+  completed_at: string | null
+  is_complete: boolean
+}
+
 export type MockState = {
   moisture: number
   valve: string
@@ -214,6 +223,13 @@ export const api = {
     getLocation: () => request<HubLocation | null>('/api/settings/location'),
     setLocation: (body: HubLocation) =>
       request<HubLocation>('/api/settings/location', { method: 'PUT', body: JSON.stringify(body) }),
+  },
+
+  onboarding: {
+    progress: () => request<OnboardingProgress>('/api/onboarding/progress'),
+    saveProgress: (body: { current_step: number; state_snapshot?: Record<string, unknown> }) =>
+      request<OnboardingProgress>('/api/onboarding/progress', { method: 'POST', body: JSON.stringify(body) }),
+    complete: () => request<OnboardingProgress>('/api/onboarding/complete', { method: 'POST' }),
   },
 
   mock: {

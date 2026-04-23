@@ -3,6 +3,24 @@
 All notable changes to Sierra will be documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.2.0] — 2026-04-23
+
+### Added
+
+- First-login onboarding wizard. After signing in for the first time, users are guided through a 4-step flow instead of landing on an empty dashboard:
+  1. **Welcome** — serif headline, animated entry, primary CTA "Inizia" and a "Salta per ora" link.
+  2. **Prima zona** — name the zone and pick a plant preset from a visual grid (uses `PlantCategoryIcon`); creates the zone via `POST /api/zones` and assigns the profile.
+  3. **Posizione** — city/address search via OpenStreetMap Nominatim (no API key, no backend change), with "Salta per ora" for users who want to configure weather later.
+  4. **Riepilogo** — animated success seal + summary cards of the configured zone and location; CTA finalises via `POST /api/onboarding/complete`.
+- Progress persistence: every step transition saves `current_step` and a snapshot via `POST /api/onboarding/progress`, so a reload resumes where the user left off.
+- Step indicator dots with moss-palette active/done states, respecting the design tokens (`--dur-emphasis`, `--ease-standard`).
+- New frontend hook `useOnboarding` and typed API surface (`api.onboarding`) for progress/complete endpoints that already existed backend-side but were never wired.
+- New components: `OnboardingScreen` (controller) + `WizardShell`, `WelcomeStep`, `ZoneStep`, `LocationStep`, `DoneStep`.
+
+### Changed
+
+- `App.tsx` now gates the main app on `is_complete`; if the onboarding row is incomplete, the wizard mounts in place of the dashboard layout.
+
 ## [0.1.5] — 2026-04-23
 
 ### Fixed
