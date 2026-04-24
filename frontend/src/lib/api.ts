@@ -234,6 +234,10 @@ export const api = {
     getLocation: () => request<HubLocation | null>('/api/settings/location'),
     setLocation: (body: HubLocation) =>
       request<HubLocation>('/api/settings/location', { method: 'PUT', body: JSON.stringify(body) }),
+    geocode: (q: string) =>
+      request<{ label: string; latitude: number; longitude: number } | null>(
+        `/api/settings/geocode?q=${encodeURIComponent(q)}`,
+      ),
   },
 
   onboarding: {

@@ -16,20 +16,6 @@ type GeocodeResult = {
   longitude: number
 }
 
-async function geocode(query: string): Promise<GeocodeResult | null> {
-  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`
-  const res = await fetch(url, { headers: { 'Accept': 'application/json' } })
-  if (!res.ok) throw new Error(`Geocoding failed (${res.status})`)
-  const data = (await res.json()) as Array<{ display_name: string; lat: string; lon: string }>
-  if (!Array.isArray(data) || data.length === 0) return null
-  const first = data[0]
-  return {
-    label: first.display_name,
-    latitude: parseFloat(first.lat),
-    longitude: parseFloat(first.lon),
-  }
-}
-
 export function LocationStep({ snapshot, onBack, onDone, onSkip }: Props) {
   const [query, setQuery] = useState(snapshot.location_label ?? '')
   const [resolved, setResolved] = useState<GeocodeResult | null>(
@@ -49,7 +35,7 @@ export function LocationStep({ snapshot, onBack, onDone, onSkip }: Props) {
     setNotFound(false)
     setSearching(true)
     try {
-      const hit = await geocode(query.trim())
+      const hit = await api.settings.geocode(query.trim())
       if (!hit) {
         setNotFound(true)
         setResolved(null)
