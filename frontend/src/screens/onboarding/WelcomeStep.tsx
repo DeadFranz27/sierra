@@ -55,7 +55,7 @@ export function WelcomeStep({ onNext, onSkip, skipping, error }: Props) {
       `}</style>
 
       <div className="eyebrow welcome-1" style={{ marginBottom: 20 }}>
-        Accesso pronto
+        Account ready
       </div>
 
       <h1
@@ -69,13 +69,13 @@ export function WelcomeStep({ onNext, onSkip, skipping, error }: Props) {
           marginBottom: 16,
         }}
       >
-        Ora configuriamo il giardino.
+        Let's set up your garden.
       </h1>
 
       <p className="lead welcome-3" style={{ marginBottom: 40 }}>
-        Il tuo accesso è pronto. In pochi passi creiamo la prima zona,
+        Your account is ready. In a few quick steps we'll create your first zone,
         <br />
-        scegliamo il profilo e impostiamo la posizione per l'irrigazione intelligente.
+        pick a plant profile and set the location for smart watering.
       </p>
 
       {error && (
@@ -101,7 +101,7 @@ export function WelcomeStep({ onNext, onSkip, skipping, error }: Props) {
           onClick={onNext}
           disabled={skipping}
         >
-          Inizia
+          Get started
         </button>
 
         <button
@@ -110,7 +110,7 @@ export function WelcomeStep({ onNext, onSkip, skipping, error }: Props) {
           onClick={onSkip}
           disabled={skipping}
         >
-          {skipping ? 'Attendere…' : 'Salta per ora'}
+          {skipping ? 'Please wait…' : 'Skip for now'}
         </button>
       </div>
     </div>

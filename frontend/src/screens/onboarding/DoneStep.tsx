@@ -150,7 +150,7 @@ export function DoneStep({ snapshot, onBack, onFinish, finishing, error }: Props
       </div>
 
       <div className="eyebrow done-1" style={{ marginBottom: 12 }}>
-        Tutto pronto
+        All set
       </div>
 
       <h2
@@ -164,11 +164,11 @@ export function DoneStep({ snapshot, onBack, onFinish, finishing, error }: Props
           marginBottom: 14,
         }}
       >
-        Il tuo giardino prende forma.
+        Your garden is taking shape.
       </h2>
 
       <p className="lead done-2" style={{ marginBottom: 28 }}>
-        Ecco come partiamo. Puoi modificare ogni cosa dalla dashboard.
+        Here's the setup. You can change everything later from the dashboard.
       </p>
 
       <div className="done-3" style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 }}>
@@ -185,7 +185,7 @@ export function DoneStep({ snapshot, onBack, onFinish, finishing, error }: Props
             )}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="summary-label">Zona</div>
+            <div className="summary-label">Zone</div>
             <div className="summary-value" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {snapshot.zone_name ?? '—'}
             </div>
@@ -203,7 +203,7 @@ export function DoneStep({ snapshot, onBack, onFinish, finishing, error }: Props
             </svg>
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="summary-label">Posizione</div>
+            <div className="summary-label">Location</div>
             {hasLocation ? (
               <>
                 <div className="summary-value" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -214,7 +214,7 @@ export function DoneStep({ snapshot, onBack, onFinish, finishing, error }: Props
                 </div>
               </>
             ) : (
-              <div className="summary-value muted">Nessuna — puoi aggiungerla più tardi dalle impostazioni.</div>
+              <div className="summary-value muted">Not set — you can add it later from settings.</div>
             )}
           </div>
         </div>
@@ -238,10 +238,10 @@ export function DoneStep({ snapshot, onBack, onFinish, finishing, error }: Props
 
       <div className="done-4" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, borderTop: '1px solid var(--border)' }}>
         <button type="button" className="done-secondary" onClick={onBack} disabled={finishing}>
-          Indietro
+          Back
         </button>
         <button type="button" className="done-primary" onClick={onFinish} disabled={finishing}>
-          {finishing ? 'Apertura…' : 'Vai alla dashboard'}
+          {finishing ? 'Opening…' : 'Go to dashboard'}
         </button>
       </div>
     </div>

@@ -52,7 +52,7 @@ export function WizardShell({ currentStep, steps, children }: Props) {
             <div
               key={s}
               className={`onb-dot ${s === currentStep ? 'active' : s < currentStep ? 'done' : ''}`}
-              aria-label={`Step ${s}${s === currentStep ? ' (corrente)' : ''}`}
+              aria-label={`Step ${s}${s === currentStep ? ' (current)' : ''}`}
             />
           ))}
         </div>

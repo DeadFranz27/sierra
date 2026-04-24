@@ -19,7 +19,7 @@ type GeocodeResult = {
 async function geocode(query: string): Promise<GeocodeResult | null> {
   const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`
   const res = await fetch(url, { headers: { 'Accept': 'application/json' } })
-  if (!res.ok) throw new Error(`Geocoding fallito (${res.status})`)
+  if (!res.ok) throw new Error(`Geocoding failed (${res.status})`)
   const data = (await res.json()) as Array<{ display_name: string; lat: string; lon: string }>
   if (!Array.isArray(data) || data.length === 0) return null
   const first = data[0]
@@ -57,7 +57,7 @@ export function LocationStep({ snapshot, onBack, onDone, onSkip }: Props) {
         setResolved(hit)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Errore di rete')
+      setError(err instanceof Error ? err.message : 'Network error')
     } finally {
       setSearching(false)
     }
@@ -79,7 +79,7 @@ export function LocationStep({ snapshot, onBack, onDone, onSkip }: Props) {
         location_lon: resolved.longitude,
       })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Errore durante il salvataggio')
+      setError(err instanceof Error ? err.message : 'Could not save the location')
       setSaving(false)
     }
   }
@@ -176,7 +176,7 @@ export function LocationStep({ snapshot, onBack, onDone, onSkip }: Props) {
       `}</style>
 
       <div className="eyebrow loc-1" style={{ marginBottom: 12, textAlign: 'center' }}>
-        Passo 2 di 3 — La tua posizione
+        Step 2 of 3 — Your location
       </div>
 
       <h2
@@ -191,13 +191,13 @@ export function LocationStep({ snapshot, onBack, onDone, onSkip }: Props) {
           textAlign: 'center',
         }}
       >
-        Dove si trova il giardino?
+        Where's the garden?
       </h2>
 
       <p className="lead loc-2" style={{ marginBottom: 28, textAlign: 'center' }}>
-        Serve per saltare l'irrigazione quando è prevista pioggia.
+        We use this to skip watering when rain is in the forecast.
         <br />
-        Puoi anche lasciarlo per dopo.
+        You can set it later if you prefer.
       </p>
 
       <form onSubmit={handleSearch} className="loc-2" style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
@@ -205,7 +205,7 @@ export function LocationStep({ snapshot, onBack, onDone, onSkip }: Props) {
           className="loc-input"
           value={query}
           onChange={e => { setQuery(e.target.value); setNotFound(false) }}
-          placeholder="Città, indirizzo o CAP — es. Milano"
+          placeholder="City, address or postal code — e.g. London"
           autoFocus
         />
         <button
@@ -213,7 +213,7 @@ export function LocationStep({ snapshot, onBack, onDone, onSkip }: Props) {
           className="loc-search-btn"
           disabled={searching || !query.trim()}
         >
-          {searching ? 'Cerco…' : 'Cerca'}
+          {searching ? 'Searching…' : 'Search'}
         </button>
       </form>
 
@@ -230,7 +230,7 @@ export function LocationStep({ snapshot, onBack, onDone, onSkip }: Props) {
             color: 'var(--amber-500)',
           }}
         >
-          Nessun risultato. Prova con una città più grande o controlla l'ortografia.
+          No results. Try a larger city or double-check the spelling.
         </div>
       )}
 
@@ -247,7 +247,7 @@ export function LocationStep({ snapshot, onBack, onDone, onSkip }: Props) {
           }}
         >
           <div style={{ fontSize: 'var(--text-xs)', color: 'var(--moss-700)', fontWeight: 600, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 'var(--tracking-eyebrow)' }}>
-            Trovato
+            Found
           </div>
           <div style={{ fontSize: 'var(--text-base)', color: 'var(--fg)', marginBottom: 6, lineHeight: 1.4 }}>
             {resolved.label}
@@ -276,17 +276,17 @@ export function LocationStep({ snapshot, onBack, onDone, onSkip }: Props) {
       )}
 
       <div className="caption loc-3" style={{ marginTop: 20, textAlign: 'center' }}>
-        La ricerca usa OpenStreetMap Nominatim.
+        Search powered by OpenStreetMap Nominatim.
       </div>
 
       <div className="loc-3" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 20, marginTop: 8, borderTop: '1px solid var(--border)' }}>
         <button type="button" className="loc-secondary" onClick={onBack} disabled={saving}>
-          Indietro
+          Back
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <button type="button" className="loc-skip" onClick={onSkip} disabled={saving}>
-            Salta per ora
+            Skip for now
           </button>
           <button
             type="button"
@@ -294,7 +294,7 @@ export function LocationStep({ snapshot, onBack, onDone, onSkip }: Props) {
             onClick={handleConfirm}
             disabled={!resolved || saving}
           >
-            {saving ? 'Salvataggio…' : 'Avanti'}
+            {saving ? 'Saving…' : 'Next'}
           </button>
         </div>
       </div>

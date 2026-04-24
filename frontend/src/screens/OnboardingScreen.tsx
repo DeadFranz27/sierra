@@ -49,7 +49,7 @@ export function OnboardingScreen({ initialProgress, demoMode, onAccountCreated, 
         state_snapshot: nextSnapshot as Record<string, unknown>,
       })
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Errore di rete')
+      setError(e instanceof Error ? e.message : 'Network error')
     }
   }
 
@@ -68,7 +68,7 @@ export function OnboardingScreen({ initialProgress, demoMode, onAccountCreated, 
       await api.onboarding.complete()
       onComplete()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Errore di rete')
+      setError(e instanceof Error ? e.message : 'Network error')
       setBusy(false)
     }
   }
@@ -80,7 +80,7 @@ export function OnboardingScreen({ initialProgress, demoMode, onAccountCreated, 
       await api.onboarding.complete()
       onComplete()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Errore di rete')
+      setError(e instanceof Error ? e.message : 'Network error')
       setBusy(false)
     }
   }

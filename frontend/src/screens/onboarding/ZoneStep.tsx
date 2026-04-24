@@ -43,7 +43,7 @@ export function ZoneStep({ snapshot, onBack, onDone }: Props) {
     let mounted = true
     api.profiles.list()
       .then(ps => { if (mounted) setProfiles(ps) })
-      .catch(e => { if (mounted) setError(e instanceof Error ? e.message : 'Impossibile caricare i profili') })
+      .catch(e => { if (mounted) setError(e instanceof Error ? e.message : 'Could not load profiles') })
     return () => { mounted = false }
   }, [])
 
@@ -54,8 +54,8 @@ export function ZoneStep({ snapshot, onBack, onDone }: Props) {
 
   function validate(): boolean {
     let ok = true
-    if (!name.trim()) { setNameError('Dai un nome alla zona'); ok = false } else setNameError('')
-    if (!profileId) { setProfileError('Scegli un profilo'); ok = false } else setProfileError('')
+    if (!name.trim()) { setNameError('Give the zone a name'); ok = false } else setNameError('')
+    if (!profileId) { setProfileError('Pick a profile'); ok = false } else setProfileError('')
     return ok
   }
 
@@ -76,7 +76,7 @@ export function ZoneStep({ snapshot, onBack, onDone }: Props) {
       }
       onDone({ zone_name: name.trim(), profile_id: profileId! })
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Errore durante la creazione')
+      setError(e instanceof Error ? e.message : 'Could not create the zone')
       setSaving(false)
     }
   }
@@ -187,7 +187,7 @@ export function ZoneStep({ snapshot, onBack, onDone }: Props) {
       `}</style>
 
       <div className="eyebrow zone-1" style={{ marginBottom: 12, textAlign: 'center' }}>
-        Passo 1 di 3 — La tua zona
+        Step 1 of 3 — Your zone
       </div>
 
       <h2
@@ -202,7 +202,7 @@ export function ZoneStep({ snapshot, onBack, onDone }: Props) {
           textAlign: 'center',
         }}
       >
-        Parliamo della tua prima zona.
+        Let's talk about your first zone.
       </h2>
 
       {alreadyCreated && (
@@ -218,7 +218,7 @@ export function ZoneStep({ snapshot, onBack, onDone }: Props) {
             color: 'var(--moss-700)',
           }}
         >
-          Zona già creata. Puoi aggiornare il profilo e continuare.
+          Zone already created. You can update the profile and continue.
         </div>
       )}
 
@@ -236,13 +236,13 @@ export function ZoneStep({ snapshot, onBack, onDone }: Props) {
               letterSpacing: 'var(--tracking-eyebrow)',
             }}
           >
-            Come la chiamerai?
+            What will you call it?
           </label>
           <input
             className={`zone-input ${nameError ? 'err' : ''}`}
             value={name}
             onChange={e => setName(e.target.value)}
-            placeholder="es. Orto sul retro, Vasi balcone, Prato"
+            placeholder="e.g. Back garden, Balcony pots, Front lawn"
             autoFocus
             disabled={alreadyCreated}
           />
@@ -262,16 +262,16 @@ export function ZoneStep({ snapshot, onBack, onDone }: Props) {
               letterSpacing: 'var(--tracking-eyebrow)',
             }}
           >
-            Che cosa ci cresce?
+            What grows there?
           </label>
 
           {profiles === null ? (
             <div style={{ color: 'var(--fg-muted)', fontSize: 'var(--text-sm)', padding: '12px 0' }}>
-              Carico i profili…
+              Loading profiles…
             </div>
           ) : presets.length === 0 ? (
             <div style={{ color: 'var(--fg-muted)', fontSize: 'var(--text-sm)', padding: '12px 0' }}>
-              Nessun profilo preset disponibile.
+              No preset profiles available.
             </div>
           ) : (
             <div className="preset-grid">
@@ -323,10 +323,10 @@ export function ZoneStep({ snapshot, onBack, onDone }: Props) {
 
         <div className="zone-4" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 8 }}>
           <button type="button" className="zone-secondary" onClick={onBack} disabled={saving}>
-            Indietro
+            Back
           </button>
           <button type="submit" className="zone-primary" disabled={saving}>
-            {saving ? 'Creazione…' : 'Avanti'}
+            {saving ? 'Creating…' : 'Next'}
           </button>
         </div>
       </form>
