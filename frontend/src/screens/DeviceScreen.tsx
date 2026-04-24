@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
+import type { FormEvent } from 'react'
 import { api } from '../lib/api'
 import type { Device, DeviceCandidate, HubLocation } from '../lib/api'
 import { Icon } from '../components/Icon'
@@ -321,7 +322,10 @@ const primaryBtnStyle: React.CSSProperties = {
 function LocationCard() {
   const [loc, setLoc] = useState<HubLocation | null>(null)
   const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState<HubLocation>({ label: '', latitude: 0, longitude: 0 })
+  const [query, setQuery] = useState('')
+  const [resolved, setResolved] = useState<HubLocation | null>(null)
+  const [searching, setSearching] = useState(false)
+  const [notFound, setNotFound] = useState(false)
   const [saving, setSaving] = useState(false)
   const [detecting, setDetecting] = useState(false)
 
@@ -332,16 +336,49 @@ function LocationCard() {
   }, [])
 
   function openEdit() {
-    setDraft(loc ?? { label: '', latitude: 0, longitude: 0 })
+    setQuery(loc?.label ?? '')
+    setResolved(loc)
+    setNotFound(false)
     setEditing(true)
+  }
+
+  function cancelEdit() {
+    setEditing(false)
+    setQuery('')
+    setResolved(null)
+    setNotFound(false)
+  }
+
+  async function doSearch(e: FormEvent) {
+    e.preventDefault()
+    const q = query.trim()
+    if (!q) return
+    setSearching(true)
+    setNotFound(false)
+    setResolved(null)
+    try {
+      const hit = await api.settings.geocode(q)
+      if (!hit) {
+        setNotFound(true)
+      } else {
+        setResolved({ label: hit.label, latitude: hit.latitude, longitude: hit.longitude })
+      }
+    } catch {
+      toast('Could not reach geocoder', 'bad')
+    } finally {
+      setSearching(false)
+    }
   }
 
   function detectGps() {
     if (!navigator.geolocation) { toast('Geolocation not supported by this browser', 'bad'); return }
     setDetecting(true)
+    setNotFound(false)
     navigator.geolocation.getCurrentPosition(
       pos => {
-        setDraft(d => ({ ...d, latitude: parseFloat(pos.coords.latitude.toFixed(5)), longitude: parseFloat(pos.coords.longitude.toFixed(5)) }))
+        const lat = parseFloat(pos.coords.latitude.toFixed(5))
+        const lon = parseFloat(pos.coords.longitude.toFixed(5))
+        setResolved({ label: `GPS fix (${lat}, ${lon})`, latitude: lat, longitude: lon })
         setDetecting(false)
       },
       () => { toast('Could not get GPS position', 'bad'); setDetecting(false) },
@@ -350,12 +387,12 @@ function LocationCard() {
   }
 
   async function save() {
-    if (!draft.label.trim()) { toast('Enter a location name', 'bad'); return }
+    if (!resolved) return
     setSaving(true)
     try {
-      const saved = await api.settings.setLocation(draft)
+      const saved = await api.settings.setLocation(resolved)
       setLoc(saved)
-      setEditing(false)
+      cancelEdit()
       toast('Location saved', 'good')
     } catch {
       toast('Could not save location', 'bad')
@@ -393,47 +430,48 @@ function LocationCard() {
       )}
 
       {editing && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div>
-            <label style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'var(--fg-muted)', display: 'block', marginBottom: 4 }}>Location name</label>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <form onSubmit={doSearch} style={{ display: 'flex', gap: 8 }}>
             <input
               autoFocus
-              value={draft.label}
-              onChange={e => setDraft(d => ({ ...d, label: e.target.value }))}
-              placeholder="e.g. My Garden, Rome"
-              style={{ width: '100%', padding: '8px 10px', fontFamily: 'var(--font-sans)', fontSize: 13, border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)', background: 'var(--bg)', color: 'var(--fg)', boxSizing: 'border-box' }}
+              value={query}
+              onChange={e => { setQuery(e.target.value); setNotFound(false) }}
+              placeholder="City, address or postal code — e.g. London"
+              style={{ flex: 1, padding: '8px 10px', fontFamily: 'var(--font-sans)', fontSize: 13, border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)', background: 'var(--bg)', color: 'var(--fg)', boxSizing: 'border-box' }}
             />
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'var(--fg-muted)', display: 'block', marginBottom: 4 }}>Latitude</label>
-              <input
-                type="number"
-                step="0.00001"
-                value={draft.latitude}
-                onChange={e => setDraft(d => ({ ...d, latitude: parseFloat(e.target.value) || 0 }))}
-                style={{ width: '100%', padding: '8px 10px', fontFamily: 'var(--font-mono)', fontSize: 13, border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)', background: 'var(--bg)', color: 'var(--fg)', boxSizing: 'border-box' }}
-              />
+            <button type="submit" disabled={searching || !query.trim()} style={{ ...secondaryBtnStyle, fontSize: 12 }}>
+              {searching ? 'Searching…' : 'Search'}
+            </button>
+          </form>
+
+          {notFound && (
+            <div style={{ padding: '8px 10px', background: 'var(--amber-100)', border: '1px solid var(--amber-300)', borderRadius: 'var(--rad-sm)', fontFamily: 'var(--font-sans)', fontSize: 12, color: 'var(--amber-500)' }}>
+              No results. Try a larger city or double-check the spelling.
             </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'var(--fg-muted)', display: 'block', marginBottom: 4 }}>Longitude</label>
-              <input
-                type="number"
-                step="0.00001"
-                value={draft.longitude}
-                onChange={e => setDraft(d => ({ ...d, longitude: parseFloat(e.target.value) || 0 }))}
-                style={{ width: '100%', padding: '8px 10px', fontFamily: 'var(--font-mono)', fontSize: 13, border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)', background: 'var(--bg)', color: 'var(--fg)', boxSizing: 'border-box' }}
-              />
+          )}
+
+          {resolved && (
+            <div style={{ padding: '10px 12px', background: 'var(--mist-300)', border: '1px solid var(--moss-200)', borderRadius: 'var(--rad-sm)' }}>
+              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: 'var(--moss-700)', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 3 }}>Found</div>
+              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'var(--fg)', lineHeight: 1.35, marginBottom: 3 }}>{resolved.label}</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fg-muted)' }}>
+                {resolved.latitude.toFixed(4)}, {resolved.longitude.toFixed(4)}
+              </div>
             </div>
+          )}
+
+          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'var(--fg-muted)' }}>
+            Search powered by OpenStreetMap Nominatim.
           </div>
+
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <button onClick={detectGps} disabled={detecting} style={{ ...secondaryBtnStyle, fontSize: 12 }}>
               <Icon name="pin" size={12} />
               {detecting ? 'Detecting…' : 'Use my GPS'}
             </button>
             <div style={{ flex: 1 }} />
-            <button onClick={() => setEditing(false)} style={secondaryBtnStyle}>Cancel</button>
-            <button onClick={save} disabled={saving} style={{ ...primaryBtnStyle, opacity: saving ? 0.6 : 1 }}>
+            <button onClick={cancelEdit} style={secondaryBtnStyle}>Cancel</button>
+            <button onClick={save} disabled={saving || !resolved} style={{ ...primaryBtnStyle, opacity: (saving || !resolved) ? 0.6 : 1 }}>
               {saving ? 'Saving…' : 'Save'}
             </button>
           </div>

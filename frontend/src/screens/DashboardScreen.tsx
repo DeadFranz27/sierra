@@ -9,26 +9,20 @@ type WeatherWindow = 24 | 168
 
 type WeatherPoint = { label: string; mm: number; wind: number }
 
-async function fetchWeatherHistory(loc: HubLocation, hours: WeatherWindow): Promise<WeatherPoint[]> {
-  const days = hours === 24 ? 1 : 7
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${loc.latitude}&longitude=${loc.longitude}&hourly=precipitation,wind_speed_10m&forecast_days=${days}&past_days=${days}&timezone=auto`
-  const res = await fetch(url)
-  const data = await res.json()
-  const times: string[] = data.hourly?.time ?? []
-  const precip: number[] = data.hourly?.precipitation ?? []
-  const wind: number[] = data.hourly?.wind_speed_10m ?? []
+async function fetchWeatherHistory(hours: WeatherWindow): Promise<WeatherPoint[]> {
+  const data = await api.settings.weatherHistory(hours)
   const now = Date.now()
   const cutoff = now - hours * 3600 * 1000
 
   const points: WeatherPoint[] = []
-  for (let i = 0; i < times.length; i++) {
-    const ts = new Date(times[i]).getTime()
+  for (const p of data.points) {
+    const ts = new Date(p.time).getTime()
     if (ts < cutoff || ts > now) continue
-    const d = new Date(times[i])
+    const d = new Date(p.time)
     const label = hours === 24
       ? d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
       : d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })
-    points.push({ label, mm: precip[i] ?? 0, wind: wind[i] ?? 0 })
+    points.push({ label, mm: p.precipitation_mm, wind: p.wind_kmh })
   }
 
   if (hours === 168) {
@@ -157,7 +151,7 @@ export function DashboardScreen({ onNavigate }: Props) {
         setLocation(loc)
         if (loc) {
           setWeatherLoading(true)
-          fetchWeatherHistory(loc, 24).then(pts => { if (mounted) setWeatherPoints(pts) }).finally(() => { if (mounted) setWeatherLoading(false) })
+          fetchWeatherHistory(24).then(pts => { if (mounted) setWeatherPoints(pts) }).finally(() => { if (mounted) setWeatherLoading(false) })
         }
         if (zs.length > 0) {
           const hist = await api.zones.history(zs[0].id, 24)
@@ -184,11 +178,11 @@ export function DashboardScreen({ onNavigate }: Props) {
   useEffect(() => {
     if (!location) return
     setWeatherLoading(true)
-    fetchWeatherHistory(location, weatherWindow)
+    fetchWeatherHistory(weatherWindow)
       .then(pts => setWeatherPoints(pts))
       .catch(() => {})
       .finally(() => setWeatherLoading(false))
-  }, [weatherWindow])
+  }, [weatherWindow, location])
 
   const primaryZone = zones[0]
 

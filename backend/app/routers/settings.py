@@ -15,6 +15,7 @@ router = APIRouter(prefix="/settings", tags=["settings"])
 
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 NOMINATIM_UA = "Sierra-Hub/0.3 (https://github.com/DeadFranz27/sierra)"
+OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
 
 
 class LocationOut(BaseModel):
@@ -33,6 +34,16 @@ class GeocodeHit(BaseModel):
     label: str
     latitude: float
     longitude: float
+
+
+class WeatherHistoryPoint(BaseModel):
+    time: str
+    precipitation_mm: float
+    wind_kmh: float
+
+
+class WeatherHistoryOut(BaseModel):
+    points: list[WeatherHistoryPoint]
 
 
 async def _get_setting(db: AsyncSession, key: str) -> str | None:
@@ -122,3 +133,66 @@ async def geocode(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Geocoding upstream returned unexpected shape",
         )
+
+
+@router.get("/weather-history", response_model=WeatherHistoryOut)
+@limiter.limit("60/minute")
+async def weather_history(
+    request: Request,
+    window_hours: int = Query(24, ge=1, le=336, alias="window"),
+    db: AsyncSession = Depends(get_db),
+    _: str = Depends(get_current_user),
+):
+    """Server-side proxy to Open-Meteo for dashboard weather charts.
+
+    Uses the hub's saved location (PUT /api/settings/location). Returns
+    hourly precipitation + wind for the requested window, centred on now
+    (half in the past, half in the forecast). Proxied because the browser
+    cannot reach api.open-meteo.com under the strict CSP.
+    """
+    lat = await _get_setting(db, "location_lat")
+    lon = await _get_setting(db, "location_lon")
+    if lat is None or lon is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Hub location is not set",
+        )
+    days = 1 if window_hours <= 24 else max(1, (window_hours + 23) // 24)
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            resp = await client.get(
+                OPEN_METEO_URL,
+                params={
+                    "latitude": lat,
+                    "longitude": lon,
+                    "hourly": "precipitation,wind_speed_10m",
+                    "forecast_days": days,
+                    "past_days": days,
+                    "timezone": "auto",
+                },
+                headers={"Accept": "application/json"},
+            )
+    except httpx.HTTPError as e:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Weather upstream error: {e}",
+        )
+    if resp.status_code != 200:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Weather upstream returned {resp.status_code}",
+        )
+    data = resp.json()
+    hourly = data.get("hourly") or {}
+    times = hourly.get("time") or []
+    precip = hourly.get("precipitation") or []
+    wind = hourly.get("wind_speed_10m") or []
+    points = [
+        WeatherHistoryPoint(
+            time=str(times[i]),
+            precipitation_mm=float(precip[i]) if i < len(precip) and precip[i] is not None else 0.0,
+            wind_kmh=float(wind[i]) if i < len(wind) and wind[i] is not None else 0.0,
+        )
+        for i in range(min(len(times), len(precip), len(wind)))
+    ]
+    return WeatherHistoryOut(points=points)

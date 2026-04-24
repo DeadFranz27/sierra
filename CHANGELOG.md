@@ -13,6 +13,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the pro
 - `POST /api/auth/setup` — public, rate-limited (5/min), available only until the first non-demo user exists; creates the first real account and sets the session cookie.
 - `--demo` installer flag → sets `SIERRA_DEMO_MODE=1` in `.env`. When enabled, the backend bootstraps a `demo` / `sierra2024` user at first boot and Step 0 shows a "Usa demo" shortcut. Without the flag, no default credentials exist.
 - `GET /api/settings/geocode?q=…` — server-side proxy to Nominatim. The wizard's Location step now goes through the backend instead of fetching `nominatim.openstreetmap.org` from the browser, so the strict CSP (`connect-src 'self'`) keeps holding and we can send a proper User-Agent as the Nominatim usage policy requires. Rate-limited (20/min) per client.
+- `GET /api/settings/weather-history?window=24|168` — server-side proxy to Open-Meteo, same reason as geocode. Reads the hub's saved location and returns hourly precipitation + wind for the dashboard weather charts. Rate-limited (60/min).
+- Device page Location card now uses the geocoder: the user types a place name, hits **Search**, sees a "Found" preview with the resolved label and coordinates before saving. Replaces the old freeform lat/lon fields that let you save any random pair without validation.
 
 ### Changed
 
