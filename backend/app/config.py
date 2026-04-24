@@ -20,13 +20,6 @@ class Settings(BaseSettings):
     sierra_hub_mqtt_user: str
     sierra_hub_mqtt_pass: str
 
-    demo_mode: bool = False
-
-    mock_mode: bool = True
-    mock_scenario: str = "default"
-    mock_time_scale: int = 1
-    mock_seed_history: bool = True
-
     timezone: str = "Europe/Rome"
     log_level: str = "INFO"
     db_path: str = "/app/data/sierra.db"

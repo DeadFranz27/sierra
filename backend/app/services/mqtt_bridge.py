@@ -1,7 +1,7 @@
 """
 MQTT bridge — subscribes to sierra/hub/+/# and writes readings to DB.
 Also publishes valve commands on behalf of the backend.
-Same topic contract as mock-hub and real firmware.
+Same topic contract as the device firmware.
 """
 from __future__ import annotations
 

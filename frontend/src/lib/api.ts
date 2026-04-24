@@ -120,18 +120,6 @@ export type OnboardingProgress = {
   is_complete: boolean
 }
 
-export type MockState = {
-  moisture: number
-  valve: string
-  weather: {
-    condition: string
-    rain_forecast_mm: number
-    temp_c: number
-  }
-  time_scale: number
-  scenario: string
-}
-
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
     credentials: 'include',
@@ -151,7 +139,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export type AuthStatus = {
   has_users: boolean
-  demo_mode: boolean
 }
 
 export const api = {
@@ -220,8 +207,6 @@ export const api = {
     unpair: (id: string) => request<void>(`/api/devices/${id}/unpair`, { method: 'POST' }),
     pair: (body: { device_id?: string; ip?: string; pairing_code: string }) =>
       request<Device>('/api/devices/pair', { method: 'POST', body: JSON.stringify(body) }),
-    mockAnnounce: (kind: 'sense' | 'valve', ip?: string) =>
-      request<DeviceCandidate>('/api/devices/mock/announce', { method: 'POST', body: JSON.stringify({ kind, ip }) }),
   },
 
   alerts: {
@@ -249,18 +234,5 @@ export const api = {
     saveProgress: (body: { current_step: number; state_snapshot?: Record<string, unknown> }) =>
       request<OnboardingProgress>('/api/onboarding/progress', { method: 'POST', body: JSON.stringify(body) }),
     complete: () => request<OnboardingProgress>('/api/onboarding/complete', { method: 'POST' }),
-  },
-
-  mock: {
-    state: () => request<MockState>('/api/mock/state'),
-    setMoisture: (value: number) =>
-      request<void>('/api/mock/moisture/set', { method: 'POST', body: JSON.stringify({ value }) }),
-    setWeather: (body: { condition: string; rain_forecast_mm?: number; temp_c?: number }) =>
-      request<void>('/api/mock/weather/set', { method: 'POST', body: JSON.stringify(body) }),
-    setTimeScale: (scale: number) =>
-      request<void>('/api/mock/time/scale', { method: 'POST', body: JSON.stringify({ scale }) }),
-    setScenario: (name: string) =>
-      request<void>('/api/mock/scenario', { method: 'POST', body: JSON.stringify({ name }) }),
-    reset: () => request<void>('/api/mock/reset', { method: 'POST' }),
   },
 }

@@ -70,16 +70,3 @@ class PairRequest(BaseModel):
 class PairResponse(BaseModel):
     device: DeviceOut
     message: str
-
-
-# ---------------------------------------------------------------------------
-# Mock announce (MOCK_MODE only)
-# ---------------------------------------------------------------------------
-
-class AnnounceRequest(BaseModel):
-    kind: str = "sense"
-    mac: Optional[str] = None
-    ip: str = "192.168.1.100"
-    port: Optional[int] = None
-    hostname: Optional[str] = None
-    firmware_version: str = "1.0.0"

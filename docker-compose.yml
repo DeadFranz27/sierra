@@ -14,24 +14,9 @@ services:
       SIERRA_HUB_MQTT_USER: ${SIERRA_HUB_MQTT_USER}
       SIERRA_HUB_MQTT_PASS: ${SIERRA_HUB_MQTT_PASS}
     ports:
-      # Default: loopback only. On a Raspberry Pi serving real hardware on the LAN,
-      # set MQTT_BIND=0.0.0.0 in .env so ESPHome devices can reach the broker.
-      - "${MQTT_BIND:-127.0.0.1}:1883:1883"
-    networks: [sierra]
-
-  mock-hub:
-    build: ./mock-hub
-    restart: unless-stopped
-    depends_on: [mosquitto]
-    environment:
-      MQTT_HOST: mosquitto
-      MQTT_PORT: 1883
-      SIERRA_HUB_MQTT_USER: ${SIERRA_HUB_MQTT_USER}
-      SIERRA_HUB_MQTT_PASS: ${SIERRA_HUB_MQTT_PASS}
-      MOCK_SCENARIO: ${MOCK_SCENARIO:-default}
-      MOCK_TIME_SCALE: ${MOCK_TIME_SCALE:-1}
-    # Admin API (8765) is NOT exposed to host — reachable only inside the sierra network
-    # or via `docker compose exec mock-hub curl http://127.0.0.1:8765/state`
+      # Default: bind on all interfaces so ESP devices on the LAN reach the broker.
+      # Override MQTT_BIND=127.0.0.1 on a laptop without hardware.
+      - "${MQTT_BIND:-0.0.0.0}:1883:1883"
     networks: [sierra]
 
   backend:
@@ -51,10 +36,10 @@ services:
     restart: unless-stopped
     depends_on: [backend]
     ports:
-      # Default: loopback (laptop dev). On a Pi deployment, set HTTP_BIND=0.0.0.0 in .env
-      # so phones/tablets on the LAN can open https://<pi-ip>/.
-      - "${HTTP_BIND:-127.0.0.1}:80:80"
-      - "${HTTP_BIND:-127.0.0.1}:443:443"
+      # Default: bind on all interfaces so phones/tablets on the LAN open https://<hub-ip>/.
+      # Override HTTP_BIND=127.0.0.1 on a laptop without hardware.
+      - "${HTTP_BIND:-0.0.0.0}:80:80"
+      - "${HTTP_BIND:-0.0.0.0}:443:443"
     volumes:
       - ./certs:/etc/nginx/certs:ro
     networks: [sierra]

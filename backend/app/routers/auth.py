@@ -24,7 +24,6 @@ from app.security.auth import (
 )
 from app.security.deps import get_current_user
 from app.security.rate_limit import limiter
-from app.config import settings
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -51,7 +50,7 @@ def _set_session_cookie(response: Response, username: str) -> None:
 async def auth_status(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).limit(1))
     has_users = result.scalar_one_or_none() is not None
-    return AuthStatusResponse(has_users=has_users, demo_mode=settings.demo_mode)
+    return AuthStatusResponse(has_users=has_users)
 
 
 @router.post("/setup", response_model=SessionResponse, status_code=status.HTTP_201_CREATED)
@@ -67,7 +66,7 @@ async def setup(request: Request, response: Response, db: AsyncSession = Depends
         detail = str(e) if e.args else "Invalid request body"
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=detail)
 
-    result = await db.execute(select(User).where(User.is_demo.is_(False)).limit(1))
+    result = await db.execute(select(User).limit(1))
     if result.scalar_one_or_none() is not None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Setup already complete")
 
@@ -78,14 +77,13 @@ async def setup(request: Request, response: Response, db: AsyncSession = Depends
     user = User(
         username=body.username,
         password_hash=hash_password(body.password),
-        is_demo=False,
     )
     db.add(user)
     await db.commit()
 
     _set_session_cookie(response, user.username)
     log.info("Setup successful — first user created: username=%s", user.username)
-    return SessionResponse(username=user.username, mock_mode=settings.mock_mode)
+    return SessionResponse(username=user.username)
 
 
 @router.post("/login", response_model=SessionResponse)
@@ -105,7 +103,7 @@ async def login(request: Request, response: Response, db: AsyncSession = Depends
 
     _set_session_cookie(response, user.username)
     log.info("Login successful for username=%s", user.username)
-    return SessionResponse(username=user.username, mock_mode=settings.mock_mode)
+    return SessionResponse(username=user.username)
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
@@ -118,4 +116,4 @@ async def logout(response: Response, request: Request, _: str = Depends(get_curr
 
 @router.get("/me", response_model=SessionResponse)
 async def me(username: str = Depends(get_current_user)):
-    return SessionResponse(username=username, mock_mode=settings.mock_mode)
+    return SessionResponse(username=username)

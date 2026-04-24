@@ -8,32 +8,27 @@
 #     cd sierra && sudo ./install.sh
 #
 # Flags (all optional):
-#     --real-hw          Use real ESPHome hardware instead of the mock simulator.
 #     --no-autostart     Don't register the systemd unit (manual start only).
 #     --branch=NAME      Clone a branch other than main (default: main).
 #     --dir=PATH         Where to install (default: ~/sierra for the invoking user).
 #
 set -euo pipefail
 
-SIERRA_VERSION="0.3.0"
+SIERRA_VERSION="0.4.0"
 DEFAULT_REPO="DeadFranz27/sierra"
 
 # ── flags ──────────────────────────────────────────────────────────────────────
-REAL_HW=0
 AUTOSTART=1
-DEMO_MODE=0
 BRANCH="main"
 TARGET_DIR=""
 
 for arg in "$@"; do
     case "$arg" in
-        --real-hw)          REAL_HW=1 ;;
         --no-autostart)     AUTOSTART=0 ;;
-        --demo)             DEMO_MODE=1 ;;
         --branch=*)         BRANCH="${arg#--branch=}" ;;
         --dir=*)            TARGET_DIR="${arg#--dir=}" ;;
         -h|--help)
-            sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'
+            sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'
             exit 0 ;;
         *) echo "Unknown flag: $arg" >&2; exit 2 ;;
     esac
@@ -99,7 +94,7 @@ SCRIPT_PATH="${BASH_SOURCE[0]:-$0}"
 INSIDE_REPO=0
 if [ -f "$SCRIPT_PATH" ]; then
     SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
-    if [ -f "$SCRIPT_DIR/docker-compose.yml" ] && [ -d "$SCRIPT_DIR/backend" ]; then
+    if [ -f "$SCRIPT_DIR/docker-compose.yml" ] && [ -d "$SCRIPT_DIR/backend" ] 2>/dev/null || [ -f "$SCRIPT_DIR/docker-compose.yml" ] && [ -d "$SCRIPT_DIR/backend" ]; then
         INSIDE_REPO=1
         # If the user ran `sudo ./install.sh` from the repo, respect that location
         # instead of moving things into ~/sierra.
@@ -251,7 +246,7 @@ set_env() {  # set_env KEY VALUE
 }
 
 if [ -f "$ENV_FILE" ]; then
-    ok "Re-using existing .env (secrets preserved, mode + LAN bind re-applied)"
+    ok "Re-using existing .env (secrets preserved, LAN bind re-applied)"
 else
     [ -f "$ENV_EXAMPLE" ] || die ".env.example missing — corrupt repo?"
     cp "$ENV_EXAMPLE" "$ENV_FILE"
@@ -265,24 +260,8 @@ else
     ok "Generated fresh .env with random secrets"
 fi
 
-if [ "$REAL_HW" -eq 1 ]; then
-    set_env MOCK_MODE   "false"
-    set_env MQTT_BIND   "0.0.0.0"
-    ok "Real-hardware mode — MQTT broker will be reachable on the LAN"
-else
-    set_env MOCK_MODE   "true"
-    set_env MQTT_BIND   "127.0.0.1"
-    ok "Demo mode — simulated zones and sensors"
-fi
-
-if [ "$DEMO_MODE" -eq 1 ]; then
-    set_env SIERRA_DEMO_MODE "1"
-    ok "Demo account enabled — 'demo' / 'sierra2024' will work alongside any account you create"
-else
-    set_env SIERRA_DEMO_MODE "0"
-fi
-
 set_env HTTP_BIND    "0.0.0.0"
+set_env MQTT_BIND    "0.0.0.0"
 set_env BACKEND_BIND "127.0.0.1"
 
 LAN_IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
@@ -311,17 +290,12 @@ chown -R "$TARGET_USER":"$TARGET_USER" "$CERTS_DIR"
 
 # ── 6. Build + up ──────────────────────────────────────────────────────────────
 step "Building and starting containers (5–10 min on first run)"
-COMPOSE_FILES=(-f "$TARGET_DIR/docker-compose.yml")
-if [ "$REAL_HW" -eq 1 ] && [ -f "$TARGET_DIR/docker-compose.real.yml" ]; then
-    COMPOSE_FILES+=(-f "$TARGET_DIR/docker-compose.real.yml")
-fi
-
 # Run compose as root — the image + volume ownership ends up fine because the containers
 # themselves drop privileges inside, and this sidesteps the "user was just added to the
 # docker group but the new group isn't active yet in this session" trap.
-docker compose "${COMPOSE_FILES[@]}" --project-directory "$TARGET_DIR" build \
+docker compose -f "$TARGET_DIR/docker-compose.yml" --project-directory "$TARGET_DIR" build \
     || die "docker compose build failed. Scroll up for the actual error."
-docker compose "${COMPOSE_FILES[@]}" --project-directory "$TARGET_DIR" up -d \
+docker compose -f "$TARGET_DIR/docker-compose.yml" --project-directory "$TARGET_DIR" up -d \
     || die "docker compose up failed. Check: docker compose -f $TARGET_DIR/docker-compose.yml ps"
 
 # ── 7. health check ────────────────────────────────────────────────────────────
@@ -353,20 +327,14 @@ fi
 
 # ── 9. summary ─────────────────────────────────────────────────────────────────
 step "Done — Sierra v$SIERRA_VERSION is running"
-if [ "$DEMO_MODE" -eq 1 ]; then
-    FIRST_LOGIN_MSG="  Demo mode is on. Accedi con ${B}demo${N} / ${B}sierra2024${N}, oppure crea
-  il tuo account dal wizard al primo avvio."
-else
-    FIRST_LOGIN_MSG="  Al primo accesso l'interfaccia ti chiederà di creare username e password
-  per il tuo account. Nessuna credenziale di default."
-fi
 cat <<EOF
   Open the UI:    ${B}https://$HOSTNAME_LOCAL/${N}
                   ${D}(or https://$LAN_IP/ if .local doesn't resolve)${N}
 
   Accept the self-signed certificate once.
 
-$FIRST_LOGIN_MSG
+  Al primo accesso l'interfaccia ti chiederà di creare username e password
+  per il tuo account. Nessuna credenziale di default.
 
   Useful commands:
     Status:   ${D}sudo systemctl status sierra${N}

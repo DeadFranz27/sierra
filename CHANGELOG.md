@@ -3,6 +3,41 @@
 All notable changes to Sierra will be documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] — 2026-04-24
+
+**Breaking release.** Sierra no longer ships the PoC mock-up layer. The hub behaves as production out of the box, ready to talk to real ESPHome devices on the LAN. Upgrading from 0.3.x requires dropping the database volume (the `users.is_demo` column is gone).
+
+### Removed
+
+- **Mock mode, entirely.** The `mock-hub` container and `mock-devices` directory are gone from the repo. The `/api/mock/*` router (`state`, `moisture`, `weather`, `time-scale`, `scenario`, `reset`) has been deleted along with the `MockControlScreen` page and the "Mock" link in the sidebar. Environment variables `SIERRA_MOCK_MODE`, `MOCK_SCENARIO`, `MOCK_TIME_SCALE`, `MOCK_SEED_HISTORY` are no longer read. The `seed_mock_history` helper that pre-filled 7 days of fake readings is deleted. `POST /api/devices/mock/announce` is gone — ESP devices now self-announce via real MQTT.
+- **Demo mode, entirely.** The `demo` / `sierra2024` bootstrap user is gone. The `is_demo` column on `users` has been dropped. The `demo_mode` field is no longer returned by `GET /api/auth/status` or `POST /api/auth/login`. The "Usa demo" banner in the account-creation step of the wizard has been removed. Environment variable `SIERRA_DEMO_MODE` and installer flag `--demo` are no longer accepted.
+- **Installer flag `--real-hw`**: every install now behaves like the old `--real-hw` mode, so the flag is redundant.
+- **Docker overlay `docker-compose.real.yml`**: base compose file is now production-ready on its own.
+- **`mock_mode` field in `/health`**: the endpoint now returns `{"status": "ok"}` only.
+
+### Changed
+
+- **MQTT bridge is always on.** Previously gated behind `mock_mode`, the bridge now starts with the backend lifespan every time. If the broker is unreachable it retries every 5s without crashing; if no device publishes, it stays idle.
+- **Default bind addresses**: `MQTT_BIND` and `HTTP_BIND` now default to `0.0.0.0` (was `127.0.0.1`). The hub's UI and broker are reachable on the LAN out of the box — the common case on a Pi. On a development laptop where you don't want LAN exposure, override with `HTTP_BIND=127.0.0.1` and `MQTT_BIND=127.0.0.1` in `.env`.
+- **`/api/auth/status`** response is now `{ has_users }` (was `{ has_users, demo_mode }`).
+- **Weather proxy**: `services/weather.py` always hits Open-Meteo; the mock-hub fallback has been removed.
+
+### Migration notes
+
+Users upgrading from 0.3.x with an existing database must reset the DB volume — the `users.is_demo` column no longer exists on the model, and while SQLite will accept the extra column in storage, keeping it around is confusing:
+
+```
+sudo systemctl stop sierra
+docker volume rm sierra_sierra_db
+cd ~/sierra && git pull && sudo systemctl start sierra
+```
+
+You'll go through onboarding again (create account, first zone, location). Plant presets are re-seeded automatically; your old zones and history are not migrated.
+
+### Known limitations
+
+- **Device discovery is manual for now.** Without the mock-hub announcing candidates, the Device → Candidates tab stays empty on a fresh install. Pair your first real device by entering its IP in the Pair modal; the firmware shows a 6-digit code, you type it in, the hub handshakes over HTTPS and persists the device. A public `POST /api/devices/announce` endpoint for boot-time auto-announcement is planned for v0.5.0.
+
 ## [0.3.0] — 2026-04-23
 
 ### Added

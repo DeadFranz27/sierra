@@ -3,9 +3,7 @@ import type { FormEvent } from 'react'
 import { api } from '../../lib/api'
 
 type Props = {
-  demoMode: boolean
   onAccountCreated: () => void
-  onUseDemo: () => void
 }
 
 const USERNAME_RE = /^[a-zA-Z0-9._-]+$/
@@ -25,13 +23,12 @@ function validatePassword(v: string): string {
   return ''
 }
 
-export function CreateAccountStep({ demoMode, onAccountCreated, onUseDemo }: Props) {
+export function CreateAccountStep({ onAccountCreated }: Props) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [showPw, setShowPw] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [usingDemo, setUsingDemo] = useState(false)
   const [error, setError] = useState('')
   const [fieldErrors, setFieldErrors] = useState<{ username?: string; password?: string; confirm?: string }>({})
 
@@ -65,18 +62,6 @@ export function CreateAccountStep({ demoMode, onAccountCreated, onUseDemo }: Pro
     }
   }
 
-  async function handleUseDemo() {
-    setError('')
-    setUsingDemo(true)
-    try {
-      await api.auth.login('demo', 'sierra2024')
-      onUseDemo()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not sign in as demo')
-      setUsingDemo(false)
-    }
-  }
-
   return (
     <div>
       <div className="eyebrow acct-1" style={{ marginBottom: 12, textAlign: 'center' }}>
@@ -102,22 +87,6 @@ export function CreateAccountStep({ demoMode, onAccountCreated, onUseDemo }: Pro
       <p className="lead acct-2" style={{ marginBottom: 24, textAlign: 'center' }}>
         Username and password stay on your hub. Nobody sees them outside.
       </p>
-
-      {demoMode && (
-        <div className="acct-2 acct-demo-banner" style={{ marginBottom: 20 }}>
-          <span>
-            You can also try the demo account right away (<span className="mono">demo</span> / <span className="mono">sierra2024</span>).
-          </span>
-          <button
-            type="button"
-            className="acct-demo-btn"
-            onClick={handleUseDemo}
-            disabled={usingDemo || saving}
-          >
-            {usingDemo ? 'Signing in…' : 'Use demo'}
-          </button>
-        </div>
-      )}
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         <div className="acct-3">
@@ -194,7 +163,7 @@ export function CreateAccountStep({ demoMode, onAccountCreated, onUseDemo }: Pro
           <button
             type="submit"
             className="acct-primary"
-            disabled={saving || usingDemo}
+            disabled={saving}
           >
             {saving ? 'Creating…' : 'Create account'}
           </button>

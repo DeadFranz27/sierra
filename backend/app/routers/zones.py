@@ -17,7 +17,6 @@ from app.schemas.zone import (
     CalibrationCaptureOut, CalibrationCompleteRequest,
 )
 from app.security.deps import get_current_user
-from app.config import settings
 from app.services import mqtt_bridge
 from app.services.profile_engine import compute_effective
 
@@ -233,19 +232,12 @@ async def calibrate_dry(
 ):
     """
     Start a 20-second dry capture window (~2 Hz).
-    In mock mode, returns a simulated raw value immediately.
-    On real hardware, reads raw ADC samples from MQTT bridge.
+    Reads raw ADC samples from MQTT bridge.
     """
     await _get_zone_or_404(db, zone_id)
 
-    if settings.mock_mode:
-        import random
-        raw = round(2800 + random.uniform(-50, 50), 1)
-        return CalibrationCaptureOut(raw_value=raw, samples=40, duration_s=20)
-
     raw = await mqtt_bridge.capture_raw_adc(zone_id, duration_s=20)
     if raw is None:
-        from fastapi import HTTPException
         raise HTTPException(status_code=503, detail="No raw ADC readings received from sensor")
     return CalibrationCaptureOut(raw_value=raw, samples=40, duration_s=20)
 
@@ -259,14 +251,8 @@ async def calibrate_wet(
     """Start a 20-second wet capture window."""
     await _get_zone_or_404(db, zone_id)
 
-    if settings.mock_mode:
-        import random
-        raw = round(1200 + random.uniform(-50, 50), 1)
-        return CalibrationCaptureOut(raw_value=raw, samples=40, duration_s=20)
-
     raw = await mqtt_bridge.capture_raw_adc(zone_id, duration_s=20)
     if raw is None:
-        from fastapi import HTTPException
         raise HTTPException(status_code=503, detail="No raw ADC readings received from sensor")
     return CalibrationCaptureOut(raw_value=raw, samples=40, duration_s=20)
 
@@ -282,7 +268,6 @@ async def calibration_complete(
     Save calibration pair and mark zone as calibrated.
     Validates raw_wet < raw_dry (capacitive sensors are lower when wet).
     """
-    from fastapi import HTTPException
     if body.raw_wet >= body.raw_dry:
         raise HTTPException(
             status_code=422,

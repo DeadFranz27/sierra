@@ -17,7 +17,6 @@ import {
 
 type Props = {
   initialProgress?: OnboardingProgress
-  demoMode: boolean
   onAccountCreated: () => void
   onComplete: () => void
 }
@@ -28,7 +27,7 @@ function clampStep(raw: number, min: WizardStep): WizardStep {
   return raw as WizardStep
 }
 
-export function OnboardingScreen({ initialProgress, demoMode, onAccountCreated, onComplete }: Props) {
+export function OnboardingScreen({ initialProgress, onAccountCreated, onComplete }: Props) {
   const startingFromAccount = !initialProgress
   const minStep: WizardStep = startingFromAccount ? 0 : 1
   const steps = startingFromAccount ? WIZARD_STEPS_WITH_ACCOUNT : WIZARD_STEPS_POST_LOGIN
@@ -96,9 +95,7 @@ export function OnboardingScreen({ initialProgress, demoMode, onAccountCreated, 
     <WizardShell currentStep={step} steps={steps}>
       {step === 0 && (
         <CreateAccountStep
-          demoMode={demoMode}
           onAccountCreated={handleAccountReady}
-          onUseDemo={handleAccountReady}
         />
       )}
       {step === 1 && (

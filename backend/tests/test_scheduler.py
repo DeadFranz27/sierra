@@ -1,7 +1,6 @@
-"""Tests for M4: scheduler skip logic, weather integration, mock control endpoints."""
+"""Tests for M4: scheduler skip logic, weather integration."""
 from __future__ import annotations
 
-import asyncio
 import os
 import pytest
 from datetime import datetime, timedelta, timezone
@@ -14,7 +13,6 @@ os.environ.setdefault("MQTT_USER", "test-backend")
 os.environ.setdefault("MQTT_PASS", "test-pass")
 os.environ.setdefault("SIERRA_HUB_MQTT_USER", "test-hub")
 os.environ.setdefault("SIERRA_HUB_MQTT_PASS", "test-hub-pass")
-os.environ.setdefault("MOCK_MODE", "true")
 
 
 # ── skip-next flag ────────────────────────────────────────────────────────────
@@ -29,53 +27,6 @@ def test_skip_next_flag():
 
 
 # ── Weather service ───────────────────────────────────────────────────────────
-
-@pytest.mark.asyncio
-async def test_weather_mock_fallback():
-    """When mock-hub is unreachable, returns sunny defaults."""
-    from app.services.weather import _mock_forecast
-    with patch("httpx.AsyncClient") as mock_cls:
-        instance = AsyncMock()
-        instance.__aenter__.return_value = instance
-        instance.__aexit__.return_value = False
-        instance.get.side_effect = Exception("connection refused")
-        mock_cls.return_value = instance
-
-        result = await _mock_forecast()
-
-    assert result.condition == "sunny"
-    assert result.rain_next_12h_mm == 0.0
-    assert result.temp_c == 20.0
-
-
-@pytest.mark.asyncio
-async def test_weather_mock_parses_state():
-    """Parses weather from mock-hub /state correctly."""
-    from app.services.weather import _mock_forecast
-    fake_state = {
-        "weather": {
-            "condition": "rainy",
-            "rain_forecast_mm": 5.5,
-            "temp_c": 12.3,
-        }
-    }
-    mock_resp = MagicMock()
-    mock_resp.raise_for_status = MagicMock()
-    mock_resp.json.return_value = fake_state
-
-    with patch("httpx.AsyncClient") as mock_cls:
-        instance = AsyncMock()
-        instance.__aenter__.return_value = instance
-        instance.__aexit__.return_value = False
-        instance.get.return_value = mock_resp
-        mock_cls.return_value = instance
-
-        result = await _mock_forecast()
-
-    assert result.condition == "rainy"
-    assert result.rain_next_12h_mm == 5.5
-    assert result.temp_c == 12.3
-
 
 @pytest.mark.asyncio
 async def test_weather_condition_thresholds():
@@ -222,44 +173,6 @@ async def test_skip_min_interval():
                     await _execute_zone_run(db, zone, schedule, schedule.duration_min)
 
     assert len(published) == 0
-
-
-# ── Mock control router ───────────────────────────────────────────────────────
-
-def test_mock_state_requires_auth(client):
-    resp = client.get("/api/mock/state")
-    assert resp.status_code == 401
-
-
-def test_mock_endpoints_return_404_in_prod_mode(auth_client):
-    import app.routers.mock_control as mc
-    original = mc.settings.mock_mode
-    mc.settings.__dict__["mock_mode"] = False
-    try:
-        resp = auth_client.get("/api/mock/state")
-        assert resp.status_code == 404
-    finally:
-        mc.settings.__dict__["mock_mode"] = original
-
-
-def test_mock_state_proxies_to_hub(auth_client):
-    """When mock-hub is reachable, /api/mock/state returns its data."""
-    fake_state = {"moisture": 55.0, "weather": {"condition": "sunny"}}
-    mock_resp = MagicMock()
-    mock_resp.raise_for_status = MagicMock()
-    mock_resp.json.return_value = fake_state
-
-    with patch("httpx.AsyncClient") as mock_cls:
-        instance = AsyncMock()
-        instance.__aenter__.return_value = instance
-        instance.__aexit__.return_value = False
-        instance.get.return_value = mock_resp
-        mock_cls.return_value = instance
-
-        resp = auth_client.get("/api/mock/state")
-
-    assert resp.status_code == 200
-    assert resp.json()["moisture"] == 55.0
 
 
 # ── Schedule CRUD triggers reload ─────────────────────────────────────────────

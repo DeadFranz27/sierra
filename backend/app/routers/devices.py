@@ -1,27 +1,25 @@
 """
 Device lifecycle API — PRD §7.3 BE-19 to BE-27.
 Covers: list, detail, candidates, pair, unpair, factory-reset,
-        reprovision-wifi, restart, clear-error, QR, mock announce.
+        reprovision-wifi, restart, clear-error, QR.
 """
 from __future__ import annotations
 
 import hashlib
 import logging
 import secrets
-import uuid
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from typing import Optional
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select, delete
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
 from app.models.base import get_db
 from app.models.tables import Device, DeviceCandidate, AuditLog
 from app.schemas.device import (
-    DeviceOut, DeviceCandidateOut, PairRequest, PairResponse, AnnounceRequest
+    DeviceOut, DeviceCandidateOut, PairRequest, PairResponse
 )
 from app.security.auth import hash_password
 from app.security.deps import get_current_user
@@ -37,11 +35,6 @@ router = APIRouter(prefix="/devices", tags=["devices"])
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
-
-
-def _require_mock():
-    if not settings.mock_mode:
-        raise HTTPException(status_code=404, detail="Not found")
 
 
 async def _get_device_or_404(db: AsyncSession, device_id: str) -> Device:
@@ -179,35 +172,27 @@ async def pair_device(
     # Base URL for reaching the device HTTP API
     _base_url = f"http://{ip}:{device_port}" if device_port else f"http://{ip}"
 
-    # In mock mode: skip real HTTP to device, simulate successful pairing
-    if settings.mock_mode:
-        kind = candidate.kind if candidate else "sense"
-        mac = candidate.mac if candidate else f"AA:BB:CC:DD:{secrets.token_hex(1).upper()}:{secrets.token_hex(1).upper()}"
-        firmware = candidate.firmware_version if candidate else "1.0.0"
-        hostname = candidate.hostname if candidate else f"sierra-{kind}-mock"
-    else:
-        # Reach device at /device/info
-        try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
-                info_r = await client.get(f"{_base_url}/device/info")
-                info_r.raise_for_status()
-                info = info_r.json()
-        except Exception as exc:
-            await _write_audit(db, "device_pair", current_user, outcome="failure",
-                                details={"ip": ip, "error": str(exc)})
-            raise HTTPException(status_code=502, detail=f"Cannot reach device: {exc}")
+    # Reach device at /device/info
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            info_r = await client.get(f"{_base_url}/device/info")
+            info_r.raise_for_status()
+            info = info_r.json()
+    except Exception as exc:
+        await _write_audit(db, "device_pair", current_user, outcome="failure",
+                            details={"ip": ip, "error": str(exc)})
+        raise HTTPException(status_code=502, detail=f"Cannot reach device: {exc}")
 
-        # Verify pairing code hash
-        code_hash = hashlib.sha256(body.pairing_code.encode()).hexdigest()
-        if info.get("pairing_code_hash") != code_hash:
-            await _write_audit(db, "device_pair", current_user, outcome="failure",
-                                details={"ip": ip, "reason": "wrong_code"})
-            raise HTTPException(status_code=403, detail="Pairing code mismatch")
+    # Verify pairing code hash
+    code_hash = hashlib.sha256(body.pairing_code.encode()).hexdigest()
+    if info.get("pairing_code_hash") != code_hash:
+        await _write_audit(db, "device_pair", current_user, outcome="failure",
+                            details={"ip": ip, "reason": "wrong_code"})
+        raise HTTPException(status_code=403, detail="Pairing code mismatch")
 
-        kind = info.get("kind", "sense")
-        mac = info.get("mac")
-        firmware = info.get("firmware", "unknown")
-        hostname = info.get("hostname")
+    kind = info.get("kind", "sense")
+    mac = info.get("mac")
+    firmware = info.get("firmware", "unknown")
 
     # Check not already paired by MAC
     if mac:
@@ -220,28 +205,23 @@ async def pair_device(
     mqtt_password = secrets.token_urlsafe(24)
     api_key = secrets.token_urlsafe(32)
 
-    # Push credentials to device.
-    # Always attempted when ip is provided (works with both real devices and local mock-devices).
-    # In mock_mode without ip, skip silently.
-    if ip:
-        try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
-                creds_r = await client.post(
-                    f"{_base_url}/device/credentials",
-                    json={
-                        "mqtt_username": mqtt_username,
-                        "mqtt_password": mqtt_password,
-                    },
-                    headers={"X-Pairing-Code": body.pairing_code},
-                )
-                creds_r.raise_for_status()
-                log.info("Credentials pushed to device at %s", _base_url)
-        except Exception as exc:
-            if not settings.mock_mode:
-                await _write_audit(db, "device_pair", current_user, outcome="failure",
-                                    details={"ip": ip, "error": str(exc)})
-                raise HTTPException(status_code=502, detail=f"Failed to deliver credentials: {exc}")
-            log.warning("Could not push credentials to mock device at %s: %s (continuing in mock mode)", _base_url, exc)
+    # Push credentials to device over HTTP.
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            creds_r = await client.post(
+                f"{_base_url}/device/credentials",
+                json={
+                    "mqtt_username": mqtt_username,
+                    "mqtt_password": mqtt_password,
+                },
+                headers={"X-Pairing-Code": body.pairing_code},
+            )
+            creds_r.raise_for_status()
+            log.info("Credentials pushed to device at %s", _base_url)
+    except Exception as exc:
+        await _write_audit(db, "device_pair", current_user, outcome="failure",
+                            details={"ip": ip, "error": str(exc)})
+        raise HTTPException(status_code=502, detail=f"Failed to deliver credentials: {exc}")
 
     # Persist device
     device = Device(
@@ -286,7 +266,7 @@ async def unpair_device(
 ):
     device = await _get_device_or_404(db, device_id)
 
-    if _is_online(device) and not settings.mock_mode:
+    if _is_online(device):
         try:
             await publish_command(device.mqtt_username or device_id, {"action": "unpair"})
         except Exception as exc:
@@ -314,18 +294,17 @@ async def factory_reset_device(
 ):
     device = await _get_device_or_404(db, device_id)
 
-    if not _is_online(device) and not settings.mock_mode:
+    if not _is_online(device):
         raise HTTPException(status_code=409, detail="Device is offline — factory reset requires online device")
 
-    if not settings.mock_mode:
-        try:
-            reset_token = secrets.token_urlsafe(16)
-            await publish_command(
-                device.mqtt_username or device_id,
-                {"action": "factory_reset", "auth_token": reset_token},
-            )
-        except Exception as exc:
-            raise HTTPException(status_code=502, detail=f"Failed to send reset command: {exc}")
+    try:
+        reset_token = secrets.token_urlsafe(16)
+        await publish_command(
+            device.mqtt_username or device_id,
+            {"action": "factory_reset", "auth_token": reset_token},
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Failed to send reset command: {exc}")
 
     await _write_audit(db, "device_factory_reset", current_user,
                        target_type="device", target_id=device.id,
@@ -349,16 +328,15 @@ async def reprovision_wifi(
 ):
     device = await _get_device_or_404(db, device_id)
 
-    if not settings.mock_mode:
-        if not _is_online(device):
-            raise HTTPException(status_code=409, detail="Device is offline — cannot send reprovision command")
-        try:
-            await publish_command(
-                device.mqtt_username or device_id,
-                {"action": "reprovision_wifi"},
-            )
-        except Exception as exc:
-            raise HTTPException(status_code=502, detail=f"Failed to send command: {exc}")
+    if not _is_online(device):
+        raise HTTPException(status_code=409, detail="Device is offline — cannot send reprovision command")
+    try:
+        await publish_command(
+            device.mqtt_username or device_id,
+            {"action": "reprovision_wifi"},
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Failed to send command: {exc}")
 
     await _write_audit(db, "device_reprovision_wifi", current_user,
                        target_type="device", target_id=device.id,
@@ -379,13 +357,12 @@ async def restart_device(
 ):
     device = await _get_device_or_404(db, device_id)
 
-    if not settings.mock_mode:
-        if not _is_online(device):
-            raise HTTPException(status_code=409, detail="Device is offline")
-        try:
-            await publish_command(device.mqtt_username or device_id, {"action": "restart"})
-        except Exception as exc:
-            raise HTTPException(status_code=502, detail=f"Failed to send command: {exc}")
+    if not _is_online(device):
+        raise HTTPException(status_code=409, detail="Device is offline")
+    try:
+        await publish_command(device.mqtt_username or device_id, {"action": "restart"})
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Failed to send command: {exc}")
 
     return {"message": "Restart command sent"}
 
@@ -427,52 +404,6 @@ async def device_qr(
         f"&fw={device.firmware_version}"
     )
     return {"qr_payload": qr_payload, "device_id": device.id}
-
-
-# ---------------------------------------------------------------------------
-# POST /api/devices/mock/announce — simulate mDNS announcement (MOCK_MODE)
-# ---------------------------------------------------------------------------
-
-@router.post("/mock/announce", response_model=DeviceCandidateOut)
-async def mock_announce(
-    body: AnnounceRequest,
-    db: AsyncSession = Depends(get_db),
-    _: str = Depends(get_current_user),
-):
-    _require_mock()
-
-    mac = body.mac or (
-        ":".join(f"{b:02X}" for b in secrets.token_bytes(6))
-    )
-    hostname = body.hostname or f"sierra-{body.kind}-{mac[-5:].replace(':', '').lower()}.local"
-
-    # Upsert by MAC
-    result = await db.execute(
-        select(DeviceCandidate).where(DeviceCandidate.mac == mac)
-    )
-    candidate = result.scalar_one_or_none()
-
-    if candidate:
-        candidate.ip = body.ip
-        candidate.port = body.port
-        candidate.last_seen_at = _now()
-        candidate.expires_at = _now() + timedelta(hours=24)
-    else:
-        candidate = DeviceCandidate(
-            kind=body.kind,
-            mac=mac,
-            ip=body.ip,
-            port=body.port,
-            hostname=hostname,
-            firmware_version=body.firmware_version,
-            expires_at=_now() + timedelta(hours=24),
-        )
-        db.add(candidate)
-
-    await db.commit()
-    await db.refresh(candidate)
-    log.info("Mock mDNS announce: %s %s @ %s", body.kind, mac, body.ip)
-    return candidate
 
 
 # ---------------------------------------------------------------------------

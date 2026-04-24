@@ -1,12 +1,11 @@
 import { Icon } from './Icon'
 
-type Page = 'dashboard' | 'zones' | 'schedule' | 'profiles' | 'device' | 'mock'
+type Page = 'dashboard' | 'zones' | 'schedule' | 'profiles' | 'device'
 
 type Props = {
   page: Page
   onNavigate: (p: Page) => void
   onLogout: () => void
-  mockMode: boolean
   children: React.ReactNode
 }
 
@@ -18,7 +17,7 @@ const navItems: { id: Page; icon: Parameters<typeof Icon>[0]['name']; label: str
   { id: 'device',    icon: 'cpu',      label: 'Device' },
 ]
 
-export function Layout({ page, onNavigate, onLogout, mockMode, children }: Props) {
+export function Layout({ page, onNavigate, onLogout, children }: Props) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
       <header style={{
@@ -39,30 +38,6 @@ export function Layout({ page, onNavigate, onLogout, mockMode, children }: Props
         }}>Sierra</span>
 
         <div style={{ flex: 1 }} />
-
-        {mockMode && (
-          <button
-            onClick={() => onNavigate('mock')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: '5px 12px',
-              background: page === 'mock' ? 'var(--mist-300)' : 'var(--amber-100)',
-              border: '1px solid var(--amber-300)',
-              borderRadius: 999,
-              fontFamily: 'var(--font-sans)',
-              fontSize: 12,
-              fontWeight: 600,
-              color: '#805821',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--state-warn)', flexShrink: 0 }} />
-            MOCK MODE
-          </button>
-        )}
 
         <div style={{
           display: 'flex',

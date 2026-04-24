@@ -34,7 +34,6 @@ class LoginRequest(BaseModel):
 
 class SessionResponse(BaseModel):
     username: str
-    mock_mode: bool
 
 
 class SetupRequest(BaseModel):
@@ -58,4 +57,3 @@ class SetupRequest(BaseModel):
 
 class AuthStatusResponse(BaseModel):
     has_users: bool
-    demo_mode: bool

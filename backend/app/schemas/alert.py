@@ -30,11 +30,3 @@ class AlertOut(BaseModel):
     resolved_at: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
-
-
-class AlertCreate(BaseModel):
-    kind: str
-    severity: str = "warning"
-    message: str
-    zone_id: Optional[str] = None
-    device_id: Optional[str] = None

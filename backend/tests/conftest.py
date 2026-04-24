@@ -11,8 +11,6 @@ os.environ.setdefault("MQTT_USER", "test-backend")
 os.environ.setdefault("MQTT_PASS", "test-pass")
 os.environ.setdefault("SIERRA_HUB_MQTT_USER", "test-hub")
 os.environ.setdefault("SIERRA_HUB_MQTT_PASS", "test-hub-pass")
-os.environ.setdefault("MOCK_MODE", "true")
-os.environ.setdefault("MOCK_SEED_HISTORY", "true")
 os.environ.setdefault("DB_PATH", ":memory:")
 
 # Point SQLAlchemy at in-memory SQLite before engine is created
@@ -24,17 +22,32 @@ _base_mod.engine = _test_engine
 _base_mod.SessionLocal = _test_session
 
 from app.main import app
-from app.security.auth import hash_password
+from app.models.base import Base
 from app.security.rate_limit import limiter
 # Prevent MQTT bridge from connecting during tests
 import app.services.mqtt_bridge as _bridge
 _bridge.run_bridge = lambda: asyncio.sleep(0)  # no-op coroutine
 
 
+async def _reset_db():
+    async with _test_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.create_all)
+
+
 @pytest.fixture(autouse=True)
-def reset_state(monkeypatch):
-    monkeypatch.setenv("DEMO_PASSWORD_HASH", hash_password("correct-password"))
+def reset_state():
     limiter._storage.reset()
+    # Fresh DB per test — run in an isolated loop so TestClient's lifespan
+    # gets a clean SQLite in-memory on each construction.
+    loop = asyncio.new_event_loop()
+    try:
+        loop.run_until_complete(_reset_db())
+    finally:
+        loop.close()
+    # Clear in-memory session store
+    from app.security import auth as _auth_mod
+    _auth_mod._sessions.clear()
     yield
     limiter._storage.reset()
 
@@ -47,6 +60,10 @@ def client():
 
 @pytest.fixture
 def auth_client(client):
-    resp = client.post("/api/auth/login", json={"username": "demo", "password": "correct-password"})
-    assert resp.status_code == 200
+    """Create the first user via /auth/setup — the response sets the session cookie."""
+    resp = client.post(
+        "/api/auth/setup",
+        json={"username": "tester", "password": "testpass1"},
+    )
+    assert resp.status_code == 201, f"setup failed: {resp.status_code} {resp.text}"
     return client

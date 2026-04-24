@@ -1,7 +1,5 @@
 """
-Weather service.
-- MOCK_MODE=true  → returns weather from mock-hub admin API
-- MOCK_MODE=false → fetches from Open-Meteo (anonymous, no key required)
+Weather service — fetches from Open-Meteo (anonymous, no key required).
 """
 from __future__ import annotations
 
@@ -44,26 +42,7 @@ class WeatherForecast:
 
 
 async def get_forecast() -> WeatherForecast:
-    if settings.mock_mode:
-        return await _mock_forecast()
     return await _open_meteo_forecast()
-
-
-async def _mock_forecast() -> WeatherForecast:
-    try:
-        async with httpx.AsyncClient(timeout=2.0) as client:
-            r = await client.get("http://mock-hub:8765/state")
-            r.raise_for_status()
-            data = r.json()
-            w = data.get("weather", {})
-            return WeatherForecast(
-                rain_next_12h_mm=float(w.get("rain_forecast_mm", 0.0)),
-                condition=w.get("condition", "sunny"),
-                temp_c=float(w.get("temp_c", 20.0)),
-            )
-    except Exception as exc:
-        log.warning("Could not reach mock-hub for weather: %s — using clear skies", exc)
-        return WeatherForecast(rain_next_12h_mm=0.0, condition="sunny", temp_c=20.0)
 
 
 async def _open_meteo_forecast() -> WeatherForecast:
@@ -87,7 +66,6 @@ async def _open_meteo_forecast() -> WeatherForecast:
 
         from datetime import datetime, timezone
         now_hour = datetime.now(timezone.utc).hour
-        # Sum precipitation over next 12 hours
         rain_12h = sum(precip[now_hour:now_hour + 12]) if precip else 0.0
         temp_c = temps[now_hour] if temps else 20.0
 

@@ -5,7 +5,6 @@ export type Route =
   | { page: 'schedule' }
   | { page: 'profiles' }
   | { page: 'device' }
-  | { page: 'mock' }
 
 export function parsePath(path: string): Route {
   const parts = path.replace(/^\//, '').split('/')
@@ -18,7 +17,6 @@ export function parsePath(path: string): Route {
     case 'schedule':  return { page: 'schedule' }
     case 'profiles':  return { page: 'profiles' }
     case 'device':    return { page: 'device' }
-    case 'mock':      return { page: 'mock' }
     default:          return { page: 'dashboard' }
   }
 }
@@ -31,7 +29,6 @@ export function routeToPath(route: Route): string {
     case 'schedule':  return '/schedule'
     case 'profiles':  return '/profiles'
     case 'device':    return '/device'
-    case 'mock':      return '/mock'
   }
 }
 

@@ -15,10 +15,7 @@ import { ZoneDetailScreen } from './screens/ZoneDetailScreen'
 import { ScheduleScreen } from './screens/ScheduleScreen'
 import { ProfilesScreen } from './screens/ProfilesScreen'
 import { DeviceScreen } from './screens/DeviceScreen'
-import { MockControlScreen } from './screens/MockControlScreen'
 import { useOnboarding } from './hooks/useOnboarding'
-
-const MOCK_MODE = import.meta.env.VITE_MOCK_MODE !== 'false'
 
 export default function App() {
   const [authed, setAuthed] = useState<boolean | null>(null)
@@ -35,7 +32,7 @@ export default function App() {
   useEffect(() => {
     api.auth.status()
       .then(setAuthStatus)
-      .catch(() => setAuthStatus({ has_users: false, demo_mode: false }))
+      .catch(() => setAuthStatus({ has_users: false }))
     api.zones.list()
       .then(() => setAuthed(true))
       .catch(() => setAuthed(false))
@@ -44,7 +41,7 @@ export default function App() {
   async function handleLogout() {
     await api.auth.logout().catch(() => {})
     setAuthed(false)
-    setAuthStatus({ has_users: true, demo_mode: authStatus?.demo_mode ?? false })
+    setAuthStatus({ has_users: true })
     navigate({ page: 'dashboard' })
   }
 
@@ -64,7 +61,6 @@ export default function App() {
     return (
       <div className="sierra">
         <OnboardingScreen
-          demoMode={authStatus.demo_mode}
           onAccountCreated={() => {
             setAuthed(true)
             setAuthStatus({ ...authStatus, has_users: true })
@@ -102,7 +98,6 @@ export default function App() {
       <div className="sierra">
         <OnboardingScreen
           initialProgress={onboardingState.progress}
-          demoMode={authStatus.demo_mode}
           onAccountCreated={() => {}}
           onComplete={() => {
             refreshOnboarding()
@@ -121,7 +116,6 @@ export default function App() {
       case 'schedule':  return <ScheduleScreen />
       case 'profiles':  return <ProfilesScreen />
       case 'device':    return <DeviceScreen />
-      case 'mock':      return <MockControlScreen />
     }
   }
 
@@ -131,10 +125,9 @@ export default function App() {
     <div className="sierra" style={{ height: '100vh' }}>
       <ToastContainer />
       <Layout
-        page={activePage as 'dashboard' | 'zones' | 'schedule' | 'profiles' | 'device' | 'mock'}
+        page={activePage as 'dashboard' | 'zones' | 'schedule' | 'profiles' | 'device'}
         onNavigate={page => go({ page } as Route)}
         onLogout={handleLogout}
-        mockMode={MOCK_MODE}
       >
         {renderPage()}
       </Layout>

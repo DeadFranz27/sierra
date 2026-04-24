@@ -1,4 +1,3 @@
-import pytest
 from fastapi.testclient import TestClient
 
 
@@ -9,18 +8,25 @@ def test_health_public(client: TestClient):
 
 
 def test_login_success_sets_httponly_cookie(client: TestClient):
-    r = client.post("/api/auth/login", json={"username": "demo", "password": "correct-password"})
+    # Bootstrap a user first via setup
+    r0 = client.post("/api/auth/setup", json={"username": "tester", "password": "testpass1"})
+    assert r0.status_code == 201
+    # Drop the setup cookie so we exercise the login path
+    client.cookies.clear()
+    r = client.post("/api/auth/login", json={"username": "tester", "password": "testpass1"})
     assert r.status_code == 200
     cookie = r.cookies.get("sierra_session")
     assert cookie is not None
-    # TestClient exposes Set-Cookie header for flag inspection
     set_cookie = r.headers.get("set-cookie", "")
     assert "httponly" in set_cookie.lower()
     assert "samesite=strict" in set_cookie.lower()
 
 
 def test_login_wrong_password_returns_401(client: TestClient):
-    r = client.post("/api/auth/login", json={"username": "demo", "password": "wrong"})
+    r0 = client.post("/api/auth/setup", json={"username": "tester", "password": "testpass1"})
+    assert r0.status_code == 201
+    client.cookies.clear()
+    r = client.post("/api/auth/login", json={"username": "tester", "password": "wrong"})
     assert r.status_code == 401
     assert r.json()["detail"] == "Invalid credentials"
 
@@ -32,8 +38,11 @@ def test_login_unknown_user_returns_401(client: TestClient):
 
 
 def test_login_error_does_not_distinguish_user_vs_password(client: TestClient):
-    r1 = client.post("/api/auth/login", json={"username": "demo", "password": "wrong"})
-    r2 = client.post("/api/auth/login", json={"username": "nobody", "password": "correct-password"})
+    r0 = client.post("/api/auth/setup", json={"username": "tester", "password": "testpass1"})
+    assert r0.status_code == 201
+    client.cookies.clear()
+    r1 = client.post("/api/auth/login", json={"username": "tester", "password": "wrong"})
+    r2 = client.post("/api/auth/login", json={"username": "nobody", "password": "testpass1"})
     assert r1.json()["detail"] == r2.json()["detail"]
 
 
@@ -45,7 +54,7 @@ def test_me_without_session_returns_401(client: TestClient):
 def test_me_with_session_returns_username(auth_client: TestClient):
     r = auth_client.get("/api/auth/me")
     assert r.status_code == 200
-    assert r.json()["username"] == "demo"
+    assert r.json()["username"] == "tester"
 
 
 def test_logout_invalidates_session(auth_client: TestClient):
@@ -79,10 +88,10 @@ def test_login_empty_username_rejected(client: TestClient):
 
 
 def test_login_empty_password_rejected(client: TestClient):
-    r = client.post("/api/auth/login", json={"username": "demo", "password": ""})
+    r = client.post("/api/auth/login", json={"username": "tester", "password": ""})
     assert r.status_code == 422
 
 
 def test_login_oversized_password_rejected(client: TestClient):
-    r = client.post("/api/auth/login", json={"username": "demo", "password": "x" * 300})
+    r = client.post("/api/auth/login", json={"username": "tester", "password": "x" * 300})
     assert r.status_code == 422
