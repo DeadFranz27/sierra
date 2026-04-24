@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import field_validator
 
@@ -21,7 +20,7 @@ class Settings(BaseSettings):
     sierra_hub_mqtt_user: str
     sierra_hub_mqtt_pass: str
 
-    demo_password_hash: Optional[str] = None
+    demo_mode: bool = False
 
     mock_mode: bool = True
     mock_scenario: str = "default"

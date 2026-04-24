@@ -149,10 +149,21 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json()
 }
 
+export type AuthStatus = {
+  has_users: boolean
+  demo_mode: boolean
+}
+
 export const api = {
   auth: {
+    status: () => request<AuthStatus>('/api/auth/status'),
     login: (username: string, password: string) =>
       request<{ username: string }>('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ username, password }),
+      }),
+    setup: (username: string, password: string) =>
+      request<{ username: string }>('/api/auth/setup', {
         method: 'POST',
         body: JSON.stringify({ username, password }),
       }),

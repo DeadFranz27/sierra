@@ -42,15 +42,14 @@ When the installer finishes it prints something like:
   Open the UI:  https://raspberrypi.local/
 ```
 
-Open that on your phone. Your browser warns about the self-signed certificate — accept it once, then log in with the demo password. Find it with:
+Open that on your phone. Your browser warns about the self-signed certificate — accept it once. From there the flow depends on how you installed:
 
-```sh
-docker compose -f ~/sierra/docker-compose.yml logs backend | grep -A2 "demo credentials"
-```
-
-You'll land in the **setup wizard**: name your zones, pick a plant profile for each (tomato, lawn, herbs, ornamental…), optionally set your location so weather-based skipping works. Demo mode lets you click through without hardware attached.
+- **Default install** (`sudo ./install.sh`): the UI opens directly on Step 0 of the setup wizard and asks you to pick a username and password for your account. Once you submit, you're logged in automatically and the wizard continues: name your first zone, pick a plant profile (tomato, lawn, herbs, ornamental…), optionally set your location so weather-based skipping works. There are no default credentials — whatever you choose is what you'll use to log in next time.
+- **Demo install** (`sudo ./install.sh --demo`): Step 0 also offers a shortcut to log in as `demo` / `sierra2024` without creating an account. Useful for showcases or throwaway trials. You can still create a custom account from the wizard if you want.
 
 If `raspberrypi.local` doesn't resolve from your phone (some Android builds skip mDNS), use the LAN IP that the installer prints instead.
+
+Forgot the password? It's stored only as an Argon2 hash in `data/sierra.db`, so there's no recovery flow — you need shell access to the hub to reset it manually (SQL update on the `users` table).
 
 ## Modes
 

@@ -11,8 +11,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
+from sqlalchemy import select
+
 from app.config import settings
 from app.models.base import init_db, SessionLocal
+from app.models.tables import User
 from app.routers import auth as auth_router
 from app.routers import zones as zones_router
 from app.routers import profiles as profiles_router
@@ -47,9 +50,9 @@ CSP = (
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    _bootstrap_demo_user()
     await init_db()
     async with SessionLocal() as db:
+        await _bootstrap_users(db)
         await seed_presets(db)
         if settings.mock_mode and settings.mock_seed_history:
             await seed_mock_history(db)
@@ -62,13 +65,26 @@ async def lifespan(app: FastAPI):
     stop_scheduler()
 
 
-def _bootstrap_demo_user() -> None:
-    import os
-    if os.environ.get("DEMO_PASSWORD_HASH"):
+async def _bootstrap_users(db) -> None:
+    """On first boot, optionally seed a demo account.
+
+    Normal install: no users exist, wizard step 0 creates the first one.
+    Demo install (SIERRA_DEMO_MODE=1): seed demo/sierra2024 so showcase
+    setups can log in without touching the UI.
+    """
+    result = await db.execute(select(User).limit(1))
+    if result.scalar_one_or_none() is not None:
+        return
+    if not settings.demo_mode:
         return
     password = "sierra2024"
-    hashed = hash_password(password)
-    os.environ["DEMO_PASSWORD_HASH"] = hashed
+    demo_user = User(
+        username="demo",
+        password_hash=hash_password(password),
+        is_demo=True,
+    )
+    db.add(demo_user)
+    await db.commit()
     print(f"\n{'='*60}", flush=True)
     print(f"  Sierra demo credentials", flush=True)
     print(f"  Username : demo", flush=True)

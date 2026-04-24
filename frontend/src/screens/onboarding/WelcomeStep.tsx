@@ -55,7 +55,7 @@ export function WelcomeStep({ onNext, onSkip, skipping, error }: Props) {
       `}</style>
 
       <div className="eyebrow welcome-1" style={{ marginBottom: 20 }}>
-        Benvenuto
+        Accesso pronto
       </div>
 
       <h1
@@ -69,13 +69,13 @@ export function WelcomeStep({ onNext, onSkip, skipping, error }: Props) {
           marginBottom: 16,
         }}
       >
-        Il tuo giardino, in pochi passi.
+        Ora configuriamo il giardino.
       </h1>
 
       <p className="lead welcome-3" style={{ marginBottom: 40 }}>
-        Configuriamo insieme la prima zona, il profilo giusto per le tue piante
+        Il tuo accesso è pronto. In pochi passi creiamo la prima zona,
         <br />
-        e la tua posizione per l'irrigazione intelligente.
+        scegliamo il profilo e impostiamo la posizione per l'irrigazione intelligente.
       </p>
 
       {error && (

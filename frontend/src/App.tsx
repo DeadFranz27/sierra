@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import './styles/sierra.css'
 import './styles/app.css'
 import { api } from './lib/api'
+import type { AuthStatus } from './lib/api'
 import { parsePath, navigate } from './lib/router'
 import type { Route } from './lib/router'
 import { Layout } from './components/Layout'
@@ -21,6 +22,7 @@ const MOCK_MODE = import.meta.env.VITE_MOCK_MODE !== 'false'
 
 export default function App() {
   const [authed, setAuthed] = useState<boolean | null>(null)
+  const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null)
   const [route, setRoute] = useState<Route>(() => parsePath(window.location.pathname))
   const { state: onboardingState, refresh: refreshOnboarding } = useOnboarding(authed === true)
 
@@ -31,6 +33,9 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    api.auth.status()
+      .then(setAuthStatus)
+      .catch(() => setAuthStatus({ has_users: false, demo_mode: false }))
     api.zones.list()
       .then(() => setAuthed(true))
       .catch(() => setAuthed(false))
@@ -39,6 +44,7 @@ export default function App() {
   async function handleLogout() {
     await api.auth.logout().catch(() => {})
     setAuthed(false)
+    setAuthStatus({ has_users: true, demo_mode: authStatus?.demo_mode ?? false })
     navigate({ page: 'dashboard' })
   }
 
@@ -46,10 +52,28 @@ export default function App() {
     navigate(r)
   }
 
-  if (authed === null) {
+  if (authed === null || authStatus === null) {
     return (
       <div className="sierra" style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-muted)', fontFamily: 'var(--font-sans)' }}>
         Loading…
+      </div>
+    )
+  }
+
+  if (!authed && !authStatus.has_users) {
+    return (
+      <div className="sierra">
+        <OnboardingScreen
+          demoMode={authStatus.demo_mode}
+          onAccountCreated={() => {
+            setAuthed(true)
+            setAuthStatus({ ...authStatus, has_users: true })
+          }}
+          onComplete={() => {
+            refreshOnboarding()
+            navigate({ page: 'dashboard' })
+          }}
+        />
       </div>
     )
   }
@@ -78,6 +102,8 @@ export default function App() {
       <div className="sierra">
         <OnboardingScreen
           initialProgress={onboardingState.progress}
+          demoMode={authStatus.demo_mode}
+          onAccountCreated={() => {}}
           onComplete={() => {
             refreshOnboarding()
             navigate({ page: 'dashboard' })

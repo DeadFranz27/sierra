@@ -1,12 +1,13 @@
 import type { ReactNode } from 'react'
-import { WIZARD_STEPS, type WizardStep } from './types'
+import type { WizardStep } from './types'
 
 type Props = {
   currentStep: WizardStep
+  steps: readonly number[]
   children: ReactNode
 }
 
-export function WizardShell({ currentStep, children }: Props) {
+export function WizardShell({ currentStep, steps, children }: Props) {
   return (
     <div
       style={{
@@ -47,7 +48,7 @@ export function WizardShell({ currentStep, children }: Props) {
         }}
       >
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {WIZARD_STEPS.map((s) => (
+          {steps.map((s) => (
             <div
               key={s}
               className={`onb-dot ${s === currentStep ? 'active' : s < currentStep ? 'done' : ''}`}

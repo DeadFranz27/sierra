@@ -15,12 +15,13 @@
 #
 set -euo pipefail
 
-SIERRA_VERSION="0.1.5"
+SIERRA_VERSION="0.3.0"
 DEFAULT_REPO="DeadFranz27/sierra"
 
 # ── flags ──────────────────────────────────────────────────────────────────────
 REAL_HW=0
 AUTOSTART=1
+DEMO_MODE=0
 BRANCH="main"
 TARGET_DIR=""
 
@@ -28,6 +29,7 @@ for arg in "$@"; do
     case "$arg" in
         --real-hw)          REAL_HW=1 ;;
         --no-autostart)     AUTOSTART=0 ;;
+        --demo)             DEMO_MODE=1 ;;
         --branch=*)         BRANCH="${arg#--branch=}" ;;
         --dir=*)            TARGET_DIR="${arg#--dir=}" ;;
         -h|--help)
@@ -273,6 +275,13 @@ else
     ok "Demo mode — simulated zones and sensors"
 fi
 
+if [ "$DEMO_MODE" -eq 1 ]; then
+    set_env SIERRA_DEMO_MODE "1"
+    ok "Demo account enabled — 'demo' / 'sierra2024' will work alongside any account you create"
+else
+    set_env SIERRA_DEMO_MODE "0"
+fi
+
 set_env HTTP_BIND    "0.0.0.0"
 set_env BACKEND_BIND "127.0.0.1"
 
@@ -344,14 +353,20 @@ fi
 
 # ── 9. summary ─────────────────────────────────────────────────────────────────
 step "Done — Sierra v$SIERRA_VERSION is running"
+if [ "$DEMO_MODE" -eq 1 ]; then
+    FIRST_LOGIN_MSG="  Demo mode is on. Accedi con ${B}demo${N} / ${B}sierra2024${N}, oppure crea
+  il tuo account dal wizard al primo avvio."
+else
+    FIRST_LOGIN_MSG="  Al primo accesso l'interfaccia ti chiederà di creare username e password
+  per il tuo account. Nessuna credenziale di default."
+fi
 cat <<EOF
   Open the UI:    ${B}https://$HOSTNAME_LOCAL/${N}
                   ${D}(or https://$LAN_IP/ if .local doesn't resolve)${N}
 
-  Accept the self-signed certificate once. Then log in with the demo
-  credentials printed by the backend — find them with:
+  Accept the self-signed certificate once.
 
-    ${D}docker compose -f $TARGET_DIR/docker-compose.yml logs backend | grep -A2 "demo credentials"${N}
+$FIRST_LOGIN_MSG
 
   Useful commands:
     Status:   ${D}sudo systemctl status sierra${N}

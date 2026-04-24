@@ -3,6 +3,28 @@
 All notable changes to Sierra will be documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] — 2026-04-23
+
+### Added
+
+- **Step 0 of the onboarding wizard — account creation.** Fresh installs no longer ship with a hardcoded password that users had to fish out of Docker logs. The first time someone opens the UI on a clean hub, the wizard now starts at Step 0 ("Crea il tuo accesso") with username, password, and confirm-password fields; submitting creates the real user and auto-signs them in, then continues with Welcome → Zone → Posizione → Done.
+- Real `users` table in the database (`id`, `username`, `password_hash`, `is_demo`, `created_at`) — multi-user capable even though the wizard currently creates a single account.
+- `GET /api/auth/status` → `{ has_users, demo_mode }` — public endpoint the frontend uses to decide whether to show login or jump straight into Step 0.
+- `POST /api/auth/setup` — public, rate-limited (5/min), available only until the first non-demo user exists; creates the first real account and sets the session cookie.
+- `--demo` installer flag → sets `SIERRA_DEMO_MODE=1` in `.env`. When enabled, the backend bootstraps a `demo` / `sierra2024` user at first boot and Step 0 shows a "Usa demo" shortcut. Without the flag, no default credentials exist.
+
+### Changed
+
+- Login now verifies credentials against the `users` table instead of a single env-hashed hardcoded account. `demo_password_hash` env var is gone.
+- App gating: `App.tsx` now loads `auth.status` alongside the zones probe. If no users exist, the wizard mounts directly at Step 0 without going through `LoginScreen`.
+- `WizardShell` accepts a dynamic `steps` prop so the step-indicator dots show 5 when starting from Step 0 and 4 when re-entering post-login.
+- `WelcomeStep` copy updated to acknowledge the account is already set up.
+- README "First login" section rewritten: fresh installs describe the Step 0 flow; the old `docker compose logs … grep "demo credentials"` recipe is gone from the default path and kept only for `--demo` mode.
+
+### Removed
+
+- Hardcoded demo password printed in the backend logs on every fresh install (now only printed when `SIERRA_DEMO_MODE=1`, i.e. when the user opted in with `--demo`).
+
 ## [0.2.0] — 2026-04-23
 
 ### Added
