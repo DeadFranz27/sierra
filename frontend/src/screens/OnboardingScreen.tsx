@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { api } from '../lib/api'
 import type { OnboardingProgress } from '../lib/api'
+import './onboarding/onboarding.css'
 import { WizardShell } from './onboarding/WizardShell'
 import { CreateAccountStep } from './onboarding/CreateAccountStep'
 import { WelcomeStep } from './onboarding/WelcomeStep'
