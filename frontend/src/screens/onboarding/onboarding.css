@@ -578,6 +578,7 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
+  gap: var(--space-7);
 }
 
 .intro-eyebrow {
@@ -587,27 +588,21 @@
   letter-spacing: var(--tracking-eyebrow);
   text-transform: uppercase;
   color: var(--fg-brand);
-  margin-bottom: var(--space-6);
 }
 
 .intro-headline {
-  position: relative;
   font-family: var(--font-display);
   font-weight: 400;
   font-size: clamp(40px, 9vw, 60px);
   line-height: var(--lh-tight);
   letter-spacing: var(--tracking-tight);
   color: var(--fg-brand);
-  margin: 0 0 var(--space-9);
-  padding-bottom: var(--space-9);
+  margin: 0;
 }
-/* Hairline that draws in under the headline once the cascade is done. */
-.intro-headline::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
+
+/* Hairline between headline and sub-paragraph. */
+.intro-rule {
+  display: block;
   height: 2px;
   width: 0;
   background: var(--accent);
@@ -624,7 +619,7 @@
   line-height: var(--lh-body);
   color: var(--fg-muted);
   max-width: 480px;
-  margin: 0 0 var(--space-9);
+  margin: 0;
 }
 
 .intro-cta {
@@ -663,7 +658,6 @@
 }
 
 .intro-hint {
-  margin-top: var(--space-5);
   font-family: var(--font-sans);
   font-size: var(--text-xs);
   color: var(--fg-subtle);
@@ -673,7 +667,6 @@
 .intro-mark {
   width: 72px;
   height: 72px;
-  margin-bottom: var(--space-6);
   overflow: visible;
 }
 /* Stem draws first (300ms), then veins (400ms each), then leaves fill in. */

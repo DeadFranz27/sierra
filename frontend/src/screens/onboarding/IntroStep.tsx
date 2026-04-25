@@ -14,6 +14,7 @@ export function IntroStep({ onBegin }: Props) {
         <h1 className="intro-headline intro-cascade-2">
           Water, only when it&rsquo;s needed.
         </h1>
+        <span className="intro-rule" aria-hidden />
         <p className="intro-sub intro-cascade-3">
           Sierra listens to your soil, watches the sky, and cares for each
           zone of your garden &mdash; quietly, on your own network.
