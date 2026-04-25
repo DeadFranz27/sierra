@@ -4,6 +4,7 @@
 !.env.example
 certs/
 !certs/.gitkeep
+mosquitto/passwd
 
 # Local data (SQLite DB, runtime state)
 backend/data/

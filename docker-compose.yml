@@ -6,6 +6,7 @@ services:
     volumes:
       - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
       - ./mosquitto/init-passwd.sh:/docker-entrypoint-init.d/init-passwd.sh:ro
+      - ./mosquitto/passwd:/mosquitto/config/passwd
       - mosquitto_data:/mosquitto/data
     entrypoint: ["sh", "/docker-entrypoint-init.d/init-passwd.sh"]
     environment:
@@ -29,6 +30,9 @@ services:
       - "${BACKEND_BIND:-127.0.0.1}:8000:8000"
     volumes:
       - sierra_db:/app/data
+      # Shared with mosquitto: backend appends per-device entries here at pair
+      # time and mosquitto reloads them via SIGHUP (see init-passwd.sh watcher).
+      - ./mosquitto/passwd:/run/mosquitto/passwd
     networks: [sierra]
 
   frontend:

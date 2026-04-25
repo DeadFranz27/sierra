@@ -23,6 +23,7 @@ from app.schemas.device import (
 )
 from app.security.auth import hash_password
 from app.security.deps import get_current_user
+from app.services import mosquitto_admin
 from app.services.mqtt_bridge import get_valve_state, publish_command
 
 log = logging.getLogger(__name__)
@@ -205,6 +206,15 @@ async def pair_device(
     mqtt_password = secrets.token_urlsafe(24)
     api_key = secrets.token_urlsafe(32)
 
+    # Register the user with mosquitto BEFORE handing creds to the device, so
+    # the broker accepts the very first connect attempt.
+    try:
+        mosquitto_admin.add_user(mqtt_username, mqtt_password)
+    except Exception as exc:
+        await _write_audit(db, "device_pair", current_user, outcome="failure",
+                            details={"ip": ip, "error": f"mosquitto: {exc}"})
+        raise HTTPException(status_code=500, detail=f"Could not register MQTT user: {exc}")
+
     # Push credentials to device over HTTP.
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
@@ -219,6 +229,11 @@ async def pair_device(
             creds_r.raise_for_status()
             log.info("Credentials pushed to device at %s", _base_url)
     except Exception as exc:
+        # Device never got the creds — roll back the broker registration.
+        try:
+            mosquitto_admin.remove_user(mqtt_username)
+        except Exception as cleanup_exc:
+            log.warning("mosquitto rollback failed for %s: %s", mqtt_username, cleanup_exc)
         await _write_audit(db, "device_pair", current_user, outcome="failure",
                             details={"ip": ip, "error": str(exc)})
         raise HTTPException(status_code=502, detail=f"Failed to deliver credentials: {exc}")
@@ -272,6 +287,12 @@ async def unpair_device(
         except Exception as exc:
             log.warning("Could not send unpair command to device %s: %s", device_id, exc)
 
+    if device.mqtt_username:
+        try:
+            mosquitto_admin.remove_user(device.mqtt_username)
+        except Exception as exc:
+            log.warning("mosquitto: remove_user(%s) failed: %s", device.mqtt_username, exc)
+
     await _write_audit(db, "device_unpair", current_user,
                        target_type="device", target_id=device.id,
                        device_id=device.id,
@@ -305,6 +326,12 @@ async def factory_reset_device(
         )
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Failed to send reset command: {exc}")
+
+    if device.mqtt_username:
+        try:
+            mosquitto_admin.remove_user(device.mqtt_username)
+        except Exception as exc:
+            log.warning("mosquitto: remove_user(%s) failed: %s", device.mqtt_username, exc)
 
     await _write_audit(db, "device_factory_reset", current_user,
                        target_type="device", target_id=device.id,
