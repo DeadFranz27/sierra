@@ -624,7 +624,7 @@
   line-height: var(--lh-body);
   color: var(--fg-muted);
   max-width: 480px;
-  margin: 0 0 var(--space-9);
+  margin: 0 0 var(--space-12);
 }
 
 .intro-cta {
@@ -669,6 +669,59 @@
   color: var(--fg-subtle);
 }
 
+/* Sierra mark — leaves grow from the stem. */
+.intro-mark {
+  width: 72px;
+  height: 72px;
+  margin-bottom: var(--space-6);
+  overflow: visible;
+}
+/* Stem draws first (300ms), then veins (400ms each), then leaves fill in. */
+.intro-mark-stem {
+  stroke-dasharray: 12;
+  stroke-dashoffset: 12;
+  animation: sierra-mark-stem 360ms var(--ease-standard) 80ms forwards;
+  transform-origin: 24px 32px;
+}
+.intro-mark-vein {
+  stroke-dasharray: 50;
+  stroke-dashoffset: 50;
+  opacity: 0;
+}
+.intro-mark-vein-left {
+  animation:
+    sierra-mark-vein 480ms var(--ease-standard) 440ms forwards,
+    sierra-mark-fade-in 240ms var(--ease-standard) 440ms forwards;
+}
+.intro-mark-vein-right {
+  animation:
+    sierra-mark-vein 480ms var(--ease-standard) 520ms forwards,
+    sierra-mark-fade-in 240ms var(--ease-standard) 520ms forwards;
+}
+.intro-mark-leaf {
+  opacity: 0;
+  transform-origin: 24px 32px;
+  transform: scale(0.6);
+}
+.intro-mark-leaf-left {
+  animation: sierra-mark-leaf 480ms var(--ease-standard) 700ms forwards;
+}
+.intro-mark-leaf-right {
+  animation: sierra-mark-leaf 480ms var(--ease-standard) 780ms forwards;
+}
+@keyframes sierra-mark-stem {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes sierra-mark-vein {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes sierra-mark-fade-in {
+  to { opacity: 0.9; }
+}
+@keyframes sierra-mark-leaf {
+  to { opacity: 1; transform: scale(1); }
+}
+
 /* Cascade entry — reuses the shared sierra-step-in keyframe. */
 .intro-cascade-1 { animation: sierra-step-in var(--dur-emphasis) var(--ease-standard) 0ms both; }
 .intro-cascade-2 { animation: sierra-step-in var(--dur-emphasis) var(--ease-standard) 180ms both; }
@@ -685,4 +738,12 @@
   .intro-cascade-3,
   .intro-cascade-4,
   .intro-cascade-5 { animation-duration: 1ms; animation-delay: 0ms; }
+  .intro-mark-stem,
+  .intro-mark-vein-left,
+  .intro-mark-vein-right,
+  .intro-mark-leaf-left,
+  .intro-mark-leaf-right { animation-duration: 1ms; animation-delay: 0ms; }
+  .intro-mark-vein { opacity: 0.9; stroke-dashoffset: 0; }
+  .intro-mark-leaf { opacity: 1; transform: none; }
+  .intro-mark-stem { stroke-dashoffset: 0; }
 }
