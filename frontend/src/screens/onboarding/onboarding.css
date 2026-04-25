@@ -598,8 +598,8 @@
   line-height: var(--lh-tight);
   letter-spacing: var(--tracking-tight);
   color: var(--fg-brand);
-  margin: 0 0 var(--space-7);
-  padding-bottom: var(--space-5);
+  margin: 0 0 var(--space-9);
+  padding-bottom: var(--space-9);
 }
 /* Hairline that draws in under the headline once the cascade is done. */
 .intro-headline::after {
@@ -624,7 +624,7 @@
   line-height: var(--lh-body);
   color: var(--fg-muted);
   max-width: 480px;
-  margin: 0 0 var(--space-12);
+  margin: 0 0 var(--space-9);
 }
 
 .intro-cta {
