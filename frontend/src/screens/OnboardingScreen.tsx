@@ -3,6 +3,7 @@ import { api } from '../lib/api'
 import type { OnboardingProgress } from '../lib/api'
 import './onboarding/onboarding.css'
 import { WizardShell } from './onboarding/WizardShell'
+import { IntroStep } from './onboarding/IntroStep'
 import { CreateAccountStep } from './onboarding/CreateAccountStep'
 import { WelcomeStep } from './onboarding/WelcomeStep'
 import { ZoneStep } from './onboarding/ZoneStep'
@@ -29,11 +30,13 @@ function clampStep(raw: number, min: WizardStep): WizardStep {
 
 export function OnboardingScreen({ initialProgress, onAccountCreated, onComplete }: Props) {
   const startingFromAccount = !initialProgress
-  const minStep: WizardStep = startingFromAccount ? 0 : 1
+  // First-run users see the brand intro (step -1) before the account form.
+  // Returning users (initialProgress exists) start straight at their saved step.
+  const minStep: WizardStep = startingFromAccount ? -1 : 1
   const steps = startingFromAccount ? WIZARD_STEPS_WITH_ACCOUNT : WIZARD_STEPS_POST_LOGIN
 
   const [step, setStep] = useState<WizardStep>(
-    clampStep(initialProgress?.current_step ?? 0, minStep),
+    clampStep(initialProgress?.current_step ?? (startingFromAccount ? -1 : 1), minStep),
   )
   const [snapshot, setSnapshot] = useState<WizardSnapshot>(
     (initialProgress?.state_snapshot as WizardSnapshot | null) ?? {},
@@ -89,6 +92,10 @@ export function OnboardingScreen({ initialProgress, onAccountCreated, onComplete
     onAccountCreated()
     setStep(1)
     await persist(1, snapshot)
+  }
+
+  if (step === -1) {
+    return <IntroStep onBegin={() => setStep(0)} />
   }
 
   return (
