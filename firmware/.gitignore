@@ -1,0 +1,7 @@
+# PlatformIO build outputs and downloaded library deps
+.pio/
+.pioenvs/
+.piolibdeps/
+.vscode/
+*.bin
+*.elf
