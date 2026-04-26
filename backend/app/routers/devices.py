@@ -40,6 +40,11 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _as_utc(dt: datetime) -> datetime:
+    """SQLite strips tzinfo on roundtrip — re-attach UTC for comparisons."""
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
 async def _get_device_or_404(db: AsyncSession, device_id: str) -> Device:
     result = await db.execute(select(Device).where(Device.id == device_id))
     device = result.scalar_one_or_none()
@@ -86,7 +91,7 @@ async def _write_audit(
 def _is_online(device: Device) -> bool:
     if not device.last_seen:
         return False
-    return (_now() - device.last_seen).total_seconds() < 90
+    return (_now() - _as_utc(device.last_seen)).total_seconds() < 90
 
 
 # ---------------------------------------------------------------------------
@@ -245,7 +250,7 @@ async def pair_device(
         candidate = await _get_candidate_or_404(db, body.device_id)
         if candidate.claimed_at:
             raise HTTPException(status_code=409, detail="Device already paired")
-        if candidate.expires_at < _now():
+        if _as_utc(candidate.expires_at) < _now():
             raise HTTPException(status_code=410, detail="Candidate expired — wait for next announce")
         ip = candidate.ip
         device_port = candidate.port
