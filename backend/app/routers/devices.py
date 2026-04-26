@@ -12,7 +12,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -125,7 +125,11 @@ async def list_devices(
 @limiter.limit("30/minute")
 async def announce_device(
     request: Request,
-    body: DeviceAnnounceIn,
+    # Explicit Body(...) is required because the slowapi @limiter
+    # decorator wraps the handler in a way that confuses FastAPI's
+    # automatic body inference — without it, Pydantic models get
+    # treated as query parameters and every request 422s.
+    body: DeviceAnnounceIn = Body(...),
     db: AsyncSession = Depends(get_db),
 ):
     if body.kind not in ("sense", "valve"):
