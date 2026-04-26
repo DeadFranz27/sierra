@@ -482,17 +482,23 @@ function LocationCard() {
 }
 
 // ─── PairModal ───────────────────────────────────────────────────────────────
-
-type PairStep = 'scan' | 'code'
+//
+// Zero-touch (TOFU) flow: devices in PAIRING state announce themselves to
+// the hub every few seconds. The modal polls /candidates and renders each
+// one as a single-click pair card — no shared secret to type.
+//
+// Manual IP is still offered as a fallback for devices that can't reach
+// sierra-hub.local (e.g. mDNS broken on the network); that path keeps the
+// 6-digit code requirement so we don't trust a bare IP blindly.
 
 function PairModal({ onClose, onPaired }: { onClose: () => void; onPaired: () => void }) {
-  const [step, setStep] = useState<PairStep>('scan')
   const [candidates, setCandidates] = useState<DeviceCandidate[]>([])
   const [scanning, setScanning] = useState(true)
-  const [selected, setSelected] = useState<DeviceCandidate | null>(null)
+  const [pairingId, setPairingId] = useState<string | null>(null)
+  const [manualOpen, setManualOpen] = useState(false)
   const [manualIp, setManualIp] = useState('')
-  const [code, setCode] = useState('')
-  const [pairing, setPairing] = useState(false)
+  const [manualCode, setManualCode] = useState('')
+  const [manualBusy, setManualBusy] = useState(false)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const scan = useCallback(async () => {
@@ -500,7 +506,7 @@ function PairModal({ onClose, onPaired }: { onClose: () => void; onPaired: () =>
       const res = await api.devices.candidates()
       setCandidates(res)
     } catch {
-      // silent
+      // silent — backend may be momentarily unreachable
     } finally {
       setScanning(false)
     }
@@ -508,156 +514,224 @@ function PairModal({ onClose, onPaired }: { onClose: () => void; onPaired: () =>
 
   useEffect(() => {
     scan()
-    pollRef.current = setInterval(scan, 4000)
+    pollRef.current = setInterval(scan, 3000)
     return () => { if (pollRef.current) clearInterval(pollRef.current) }
   }, [scan])
 
-  async function handlePair() {
-    const trimCode = code.trim()
-    if (trimCode.length !== 6) { toast('Enter the 6-digit code shown on the device', 'bad'); return }
-    setPairing(true)
+  async function pairCandidate(c: DeviceCandidate) {
+    setPairingId(c.id)
     try {
-      await api.devices.pair({
-        device_id: selected?.id,
-        ip: !selected ? manualIp || undefined : undefined,
-        pairing_code: trimCode,
-      })
-      toast('Device paired successfully', 'good')
+      await api.devices.pair({ device_id: c.id })
+      toast(`${kindLabel(c.kind)} paired`, 'good')
       onPaired()
       onClose()
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Pairing failed'
-      toast(msg.includes('403') ? 'Wrong pairing code — check the display on the device' : msg.includes('409') ? 'Device already paired' : 'Pairing failed — check the code and try again', 'bad')
+      const friendly =
+        msg.includes('409') ? 'Device already paired' :
+        msg.includes('410') ? 'Device went quiet — wait a few seconds and try again' :
+        msg.includes('502') ? 'Could not reach the device — make sure it is still on Wi-Fi' :
+        'Pairing failed — please try again'
+      toast(friendly, 'bad')
+      // Refresh list so a stale or just-claimed candidate disappears.
+      scan()
     } finally {
-      setPairing(false)
+      setPairingId(null)
+    }
+  }
+
+  async function pairManual() {
+    const ip = manualIp.trim()
+    const code = manualCode.trim()
+    if (!ip) { toast('Enter the device IP', 'bad'); return }
+    if (code.length !== 6) { toast('Enter the 6-digit code', 'bad'); return }
+    setManualBusy(true)
+    try {
+      await api.devices.pair({ ip, pairing_code: code })
+      toast('Device paired', 'good')
+      onPaired()
+      onClose()
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Pairing failed'
+      const friendly =
+        msg.includes('403') ? 'Wrong pairing code' :
+        msg.includes('409') ? 'Device already paired' :
+        msg.includes('502') ? 'Could not reach the device at that IP' :
+        'Pairing failed — please try again'
+      toast(friendly, 'bad')
+    } finally {
+      setManualBusy(false)
     }
   }
 
   const kindLabel = (k: string) => k === 'sense' ? 'Sierra Sense' : k === 'valve' ? 'Sierra Valve' : k
   const kindIcon = (k: string): IconName => k === 'sense' ? 'activity' : 'droplet'
+  const kindSubtitle = (k: string) =>
+    k === 'sense' ? 'Soil moisture sensor' :
+    k === 'valve' ? 'Water valve actuator' : ''
 
   return (
-    <Modal title="Add device" onClose={onClose} width={480}>
-      {step === 'scan' ? (
-        <div>
-          <p style={{ fontFamily: 'var(--font-sans)', fontSize: 14, color: 'var(--fg-muted)', marginBottom: 20, lineHeight: 1.6 }}>
-            Devices on your network that are ready to pair will appear below. Make sure the device is powered on and connected to Wi-Fi.
-          </p>
+    <Modal title="Add a device" onClose={onClose} width={480}>
+      <p style={{ fontFamily: 'var(--font-sans)', fontSize: 14, color: 'var(--fg-muted)', marginBottom: 20, lineHeight: 1.6 }}>
+        Power on a Sierra device and connect it to your Wi-Fi. It will appear here automatically — tap to pair.
+      </p>
 
-          {/* Candidate list */}
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 'var(--tracking-eyebrow)', color: 'var(--fg-muted)', marginBottom: 10 }}>
-              Discovered devices {scanning && '· scanning…'}
-            </div>
-            {candidates.length === 0 ? (
-              <div style={{
-                padding: '20px 16px', borderRadius: 'var(--rad-md)',
-                border: '1px dashed var(--border)', textAlign: 'center',
-                fontFamily: 'var(--font-sans)', fontSize: 13, color: 'var(--fg-muted)',
-              }}>
-                {scanning ? 'Scanning…' : 'No devices found yet. Checking every 4 seconds…'}
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {candidates.map(c => (
-                  <button
-                    key={c.id}
-                    onClick={() => { setSelected(c); setStep('code') }}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 14,
-                      padding: '12px 14px', borderRadius: 'var(--rad-md)',
-                      border: `1px solid ${selected?.id === c.id ? 'var(--fg-brand)' : 'var(--border)'}`,
-                      background: selected?.id === c.id ? 'var(--bg-sunken)' : 'var(--bg-elevated)',
-                      cursor: 'pointer', textAlign: 'left', width: '100%',
-                    }}
-                  >
-                    <div style={{ width: 36, height: 36, borderRadius: 'var(--rad-sm)', background: 'var(--bg-sunken)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-brand)', flexShrink: 0 }}>
-                      <Icon name={kindIcon(c.kind)} size={18} />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600, color: 'var(--fg)' }}>{kindLabel(c.kind)}</div>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fg-muted)', marginTop: 2 }}>{c.mac} · {c.ip}{c.port ? `:${c.port}` : ''}</div>
-                    </div>
-                    <Badge label={`fw ${c.firmware_version}`} tone="neutral" />
-                  </button>
-                ))}
-              </div>
-            )}
+      {/* Eyebrow + live discovery indicator */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        marginBottom: 12,
+      }}>
+        <div style={{
+          fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600,
+          textTransform: 'uppercase', letterSpacing: 'var(--tracking-eyebrow)',
+          color: 'var(--fg-muted)',
+        }}>
+          On your network
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-sans)', fontSize: 11, color: 'var(--fg-muted)' }}>
+          <span style={{
+            display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
+            background: 'var(--moss-500)',
+            animation: 'pair-pulse 1.4s var(--ease-standard) infinite',
+          }} />
+          Listening
+        </div>
+      </div>
+
+      {candidates.length === 0 ? (
+        <div style={{
+          padding: '28px 18px', borderRadius: 'var(--rad-md)',
+          border: '1px dashed var(--border)', textAlign: 'center',
+          background: 'var(--bg-sunken)',
+        }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, color: 'var(--fg)', marginBottom: 6 }}>
+            {scanning ? 'Looking for devices…' : 'Nothing found yet'}
           </div>
+          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'var(--fg-muted)', lineHeight: 1.6, maxWidth: 320, margin: '0 auto' }}>
+            New devices appear within a few seconds of joining your Wi-Fi. The blinking LED on the device means it's looking for the hub.
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {candidates.map(c => {
+            const busy = pairingId === c.id
+            const disabled = pairingId !== null
+            return (
+              <button
+                key={c.id}
+                onClick={() => pairCandidate(c)}
+                disabled={disabled}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 14,
+                  padding: '14px 16px', borderRadius: 'var(--rad-md)',
+                  border: '1px solid var(--moss-200)',
+                  background: busy ? 'var(--mist-300)' : 'var(--bg-elevated)',
+                  cursor: disabled ? 'wait' : 'pointer', textAlign: 'left', width: '100%',
+                  transition: 'background var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard)',
+                  opacity: disabled && !busy ? 0.5 : 1,
+                }}
+              >
+                <div style={{
+                  width: 40, height: 40, borderRadius: 'var(--rad-sm)',
+                  background: 'var(--bg-sunken)', color: 'var(--fg-brand)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0,
+                }}>
+                  <Icon name={kindIcon(c.kind)} size={20} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 17, color: 'var(--fg-brand)', lineHeight: 1.2 }}>
+                    {kindLabel(c.kind)}
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'var(--fg-muted)', marginTop: 2 }}>
+                    {kindSubtitle(c.kind)}
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fg-muted)', marginTop: 4 }}>
+                    {c.mac} · {c.ip} · fw {c.firmware_version}
+                  </div>
+                </div>
+                <span style={{
+                  fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600,
+                  color: busy ? 'var(--fg-muted)' : 'var(--fg-brand)', flexShrink: 0,
+                }}>
+                  {busy ? 'Pairing…' : 'Pair →'}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      )}
 
-          {/* Manual IP fallback */}
-          <details style={{ marginTop: 8 }}>
-            <summary style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'var(--fg-muted)', cursor: 'pointer', userSelect: 'none' }}>
-              Enter IP address manually
-            </summary>
-            <div style={{ marginTop: 10, display: 'flex', gap: 8 }}>
+      {/* Manual IP fallback — kept inside the same modal but hidden by default */}
+      <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+        {!manualOpen ? (
+          <button
+            onClick={() => setManualOpen(true)}
+            style={{
+              background: 'none', border: 'none', padding: 0,
+              fontFamily: 'var(--font-sans)', fontSize: 12, color: 'var(--fg-muted)',
+              cursor: 'pointer', textDecoration: 'underline',
+            }}
+          >
+            Don't see your device? Pair manually by IP
+          </button>
+        ) : (
+          <div>
+            <div style={{
+              fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600,
+              textTransform: 'uppercase', letterSpacing: 'var(--tracking-eyebrow)',
+              color: 'var(--fg-muted)', marginBottom: 10,
+            }}>
+              Manual pairing
+            </div>
+            <p style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'var(--fg-muted)', marginBottom: 12, lineHeight: 1.5 }}>
+              Use this if the hub can't auto-discover the device. Find the device IP from your router and the 6-digit code on the device's serial console.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <input
                 value={manualIp}
                 onChange={e => setManualIp(e.target.value)}
-                placeholder="192.168.1.x"
+                placeholder="Device IP — e.g. 192.168.1.42"
                 style={{
-                  flex: 1, padding: '8px 10px', fontFamily: 'var(--font-mono)', fontSize: 13,
+                  width: '100%', padding: '8px 10px', fontFamily: 'var(--font-mono)', fontSize: 13,
                   border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)',
-                  background: 'var(--bg)', color: 'var(--fg)',
+                  background: 'var(--bg)', color: 'var(--fg)', boxSizing: 'border-box',
                 }}
               />
-              <button
-                onClick={() => { setSelected(null); setStep('code') }}
-                disabled={!manualIp.trim()}
-                style={{ ...primaryBtnStyle, opacity: manualIp.trim() ? 1 : 0.4 }}
-              >
-                Next
-              </button>
+              <input
+                value={manualCode}
+                onChange={e => setManualCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                onKeyDown={e => { if (e.key === 'Enter') pairManual() }}
+                placeholder="000000"
+                maxLength={6}
+                style={{
+                  width: '100%', padding: '10px 12px', fontFamily: 'var(--font-mono)', fontSize: 18,
+                  letterSpacing: '0.25em', textAlign: 'center',
+                  border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)',
+                  background: 'var(--bg)', color: 'var(--fg)', boxSizing: 'border-box',
+                }}
+              />
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
+                <button onClick={() => { setManualOpen(false); setManualIp(''); setManualCode('') }} style={secondaryBtnStyle}>Cancel</button>
+                <button
+                  onClick={pairManual}
+                  disabled={manualBusy || !manualIp.trim() || manualCode.length !== 6}
+                  style={{ ...primaryBtnStyle, opacity: (manualBusy || !manualIp.trim() || manualCode.length !== 6) ? 0.5 : 1 }}
+                >
+                  {manualBusy ? 'Pairing…' : 'Pair'}
+                </button>
+              </div>
             </div>
-          </details>
-        </div>
-      ) : (
-        <div>
-          {/* Back link */}
-          <button onClick={() => { setStep('scan'); setCode('') }} style={{ ...secondaryBtnStyle, marginBottom: 20, fontSize: 12 }}>
-            ← Back
-          </button>
-
-          {selected ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 'var(--rad-md)', background: 'var(--bg-sunken)', marginBottom: 20 }}>
-              <Icon name={kindIcon(selected.kind)} size={16} style={{ color: 'var(--fg-brand)' }} />
-              <span style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600 }}>{kindLabel(selected.kind)}</span>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fg-muted)' }}>{selected.mac}</span>
-            </div>
-          ) : (
-            <div style={{ padding: '10px 14px', borderRadius: 'var(--rad-md)', background: 'var(--bg-sunken)', marginBottom: 20, fontFamily: 'var(--font-mono)', fontSize: 13 }}>
-              {manualIp}
-            </div>
-          )}
-
-          <p style={{ fontFamily: 'var(--font-sans)', fontSize: 14, color: 'var(--fg-muted)', marginBottom: 16, lineHeight: 1.6 }}>
-            Enter the 6-digit pairing code shown on the device's screen or in the mock console.
-          </p>
-
-          <input
-            autoFocus
-            value={code}
-            onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-            onKeyDown={e => { if (e.key === 'Enter') handlePair() }}
-            placeholder="000000"
-            maxLength={6}
-            style={{
-              width: '100%', padding: '14px 16px', marginBottom: 20,
-              fontFamily: 'var(--font-mono)', fontSize: 28, letterSpacing: '0.3em',
-              textAlign: 'center', border: '1px solid var(--border)',
-              borderRadius: 'var(--rad-md)', background: 'var(--bg)', color: 'var(--fg)',
-              boxSizing: 'border-box',
-            }}
-          />
-
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-            <button onClick={onClose} style={secondaryBtnStyle}>Cancel</button>
-            <button onClick={handlePair} disabled={pairing || code.length !== 6} style={{ ...primaryBtnStyle, opacity: (pairing || code.length !== 6) ? 0.5 : 1 }}>
-              {pairing ? 'Pairing…' : 'Pair device'}
-            </button>
           </div>
-        </div>
-      )}
+        )}
+      </div>
+
+      <style>{`
+        @keyframes pair-pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.4; transform: scale(0.7); }
+        }
+      `}</style>
     </Modal>
   )
 }

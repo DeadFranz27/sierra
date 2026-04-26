@@ -57,12 +57,30 @@ class DeviceCandidateOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class DeviceAnnounceIn(BaseModel):
+    """Self-announcement from a freshly flashed device on the LAN.
+
+    Sent every few seconds while the device is in PAIRING state. The
+    backend trusts the source IP (read from the request) over any IP
+    field in the body — devices behind NAT can't know their own LAN IP
+    reliably and we want TOFU bound to the actual network peer.
+    """
+    kind: str
+    mac: str
+    port: Optional[int] = None
+    hostname: Optional[str] = None
+    firmware_version: str = "unknown"
+
+
 # ---------------------------------------------------------------------------
 # Pairing
 # ---------------------------------------------------------------------------
 
 class PairRequest(BaseModel):
-    pairing_code: str
+    # Optional: if omitted, the backend treats this as zero-touch TOFU
+    # pairing — the candidate's freshness + reachability stand in for the
+    # shared secret. A code is still accepted for the manual-IP fallback.
+    pairing_code: Optional[str] = None
     device_id: Optional[str] = None   # candidate UUID (preferred)
     ip: Optional[str] = None           # fallback manual IP
 

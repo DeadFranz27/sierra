@@ -8,19 +8,22 @@ from __future__ import annotations
 import hashlib
 import logging
 import secrets
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.base import get_db
 from app.models.tables import Device, DeviceCandidate, AuditLog
 from app.schemas.device import (
-    DeviceOut, DeviceCandidateOut, PairRequest, PairResponse
+    DeviceOut, DeviceAnnounceIn, DeviceCandidateOut, PairRequest, PairResponse
 )
+from app.security.rate_limit import limiter
+
+CANDIDATE_TTL_SECONDS = 300
 from app.security.auth import hash_password
 from app.security.deps import get_current_user
 from app.services import mosquitto_admin
@@ -108,7 +111,74 @@ async def list_devices(
 
 
 # ---------------------------------------------------------------------------
-# GET /api/devices/candidates — mDNS-discovered devices awaiting pairing
+# POST /api/devices/announce — device self-announces while in PAIRING (BE-19)
+# ---------------------------------------------------------------------------
+#
+# Unauthenticated by design: the device has no credentials yet. The endpoint
+# is reachable only from the LAN (nginx already restricts the API surface)
+# and is rate-limited per source IP. We trust the *source IP* over anything
+# in the body so a misconfigured or malicious device can't claim a peer's
+# address. Each announce extends a short TTL; stale candidates are filtered
+# out by GET /candidates.
+
+@router.post("/announce", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("30/minute")
+async def announce_device(
+    request: Request,
+    body: DeviceAnnounceIn,
+    db: AsyncSession = Depends(get_db),
+):
+    if body.kind not in ("sense", "valve"):
+        raise HTTPException(status_code=422, detail="kind must be sense or valve")
+
+    source_ip = request.client.host if request.client else None
+    if not source_ip:
+        raise HTTPException(status_code=400, detail="cannot determine source ip")
+
+    now = _now()
+    expires = now + timedelta(seconds=CANDIDATE_TTL_SECONDS)
+
+    # If this MAC is already paired, ignore the announce silently — the
+    # device just hasn't realised yet (creds not flushed to NVS, etc).
+    paired = await db.execute(select(Device).where(Device.mac == body.mac))
+    if paired.scalar_one_or_none():
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    existing = await db.execute(
+        select(DeviceCandidate).where(DeviceCandidate.mac == body.mac)
+    )
+    candidate = existing.scalar_one_or_none()
+    if candidate:
+        candidate.kind = body.kind
+        candidate.ip = source_ip
+        candidate.port = body.port
+        candidate.hostname = body.hostname
+        candidate.firmware_version = body.firmware_version
+        candidate.last_seen_at = now
+        candidate.expires_at = expires
+        # If a previous pair attempt was claimed but the device is still
+        # announcing, the pair never completed (backend crashed, network
+        # blip mid-credential-push). Un-claim so it can be re-paired.
+        if candidate.claimed_at:
+            candidate.claimed_at = None
+    else:
+        db.add(DeviceCandidate(
+            kind=body.kind,
+            mac=body.mac,
+            ip=source_ip,
+            port=body.port,
+            hostname=body.hostname,
+            firmware_version=body.firmware_version,
+            announced_at=now,
+            last_seen_at=now,
+            expires_at=expires,
+        ))
+    await db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# ---------------------------------------------------------------------------
+# GET /api/devices/candidates — devices awaiting pairing (announced, unclaimed)
 # ---------------------------------------------------------------------------
 
 @router.get("/candidates", response_model=list[DeviceCandidateOut])
@@ -163,6 +233,8 @@ async def pair_device(
         candidate = await _get_candidate_or_404(db, body.device_id)
         if candidate.claimed_at:
             raise HTTPException(status_code=409, detail="Device already paired")
+        if candidate.expires_at < _now():
+            raise HTTPException(status_code=410, detail="Candidate expired — wait for next announce")
         ip = candidate.ip
         device_port = candidate.port
     elif body.ip:
@@ -184,12 +256,22 @@ async def pair_device(
                             details={"ip": ip, "error": str(exc)})
         raise HTTPException(status_code=502, detail=f"Cannot reach device: {exc}")
 
-    # Verify pairing code hash
-    code_hash = hashlib.sha256(body.pairing_code.encode()).hexdigest()
-    if info.get("pairing_code_hash") != code_hash:
-        await _write_audit(db, "device_pair", current_user, outcome="failure",
-                            details={"ip": ip, "reason": "wrong_code"})
-        raise HTTPException(status_code=403, detail="Pairing code mismatch")
+    # If the user supplied a code (manual-IP fallback path, or older firmware
+    # that exposes pairing_code_hash), verify it. With zero-touch pairing the
+    # candidate's freshness + reachability act as the trust signal (TOFU).
+    if body.pairing_code:
+        code_hash = hashlib.sha256(body.pairing_code.encode()).hexdigest()
+        if info.get("pairing_code_hash") and info["pairing_code_hash"] != code_hash:
+            await _write_audit(db, "device_pair", current_user, outcome="failure",
+                                details={"ip": ip, "reason": "wrong_code"})
+            raise HTTPException(status_code=403, detail="Pairing code mismatch")
+    elif not candidate:
+        # Zero-touch only makes sense when the device has announced itself.
+        # A bare IP with no code could be anything on the LAN.
+        raise HTTPException(
+            status_code=422,
+            detail="Manual-IP pairing requires a pairing code",
+        )
 
     kind = info.get("kind", "sense")
     mac = info.get("mac")
@@ -215,8 +297,14 @@ async def pair_device(
                             details={"ip": ip, "error": f"mosquitto: {exc}"})
         raise HTTPException(status_code=500, detail=f"Could not register MQTT user: {exc}")
 
-    # Push credentials to device over HTTP.
+    # Push credentials to device over HTTP. The X-Pairing-Code header is
+    # only sent when the user provided a code (manual-IP fallback). Firmware
+    # accepts unauthenticated credential pushes too — it can only be reached
+    # by whoever the device announced to, so the source IP is the trust root.
     try:
+        push_headers: dict[str, str] = {}
+        if body.pairing_code:
+            push_headers["X-Pairing-Code"] = body.pairing_code
         async with httpx.AsyncClient(timeout=5.0) as client:
             creds_r = await client.post(
                 f"{_base_url}/device/credentials",
@@ -224,7 +312,7 @@ async def pair_device(
                     "mqtt_username": mqtt_username,
                     "mqtt_password": mqtt_password,
                 },
-                headers={"X-Pairing-Code": body.pairing_code},
+                headers=push_headers,
             )
             creds_r.raise_for_status()
             log.info("Credentials pushed to device at %s", _base_url)
