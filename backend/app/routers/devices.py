@@ -45,6 +45,25 @@ def _as_utc(dt: datetime) -> datetime:
     return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
 
+# A device is "online" if we've heard from it within this window. The hub
+# firmware publishes a status frame every ~30 s; 90 s gives us 3 missed
+# frames before flipping to offline, which is forgiving enough to absorb
+# Wi-Fi blips without flapping.
+DEVICE_ONLINE_WINDOW_SECONDS = 90
+
+
+def _to_device_out(device: Device) -> DeviceOut:
+    item = DeviceOut.model_validate(device)
+    if device.error_flag:
+        item.status = "error"
+    elif device.last_seen is None:
+        item.status = "offline"
+    else:
+        age = (_now() - _as_utc(device.last_seen)).total_seconds()
+        item.status = "online" if age <= DEVICE_ONLINE_WINDOW_SECONDS else "offline"
+    return item
+
+
 async def _get_device_or_404(db: AsyncSession, device_id: str) -> Device:
     result = await db.execute(select(Device).where(Device.id == device_id))
     device = result.scalar_one_or_none()
@@ -107,7 +126,7 @@ async def list_devices(
     devices = result.scalars().all()
     out = []
     for d in devices:
-        item = DeviceOut.model_validate(d)
+        item = _to_device_out(d)
         if d.kind in ("hub", "valve"):
             item.valve_state = get_valve_state()
         out.append(item)
@@ -225,7 +244,7 @@ async def get_device(
     _: str = Depends(get_current_user),
 ):
     device = await _get_device_or_404(db, device_id)
-    item = DeviceOut.model_validate(device)
+    item = _to_device_out(device)
     if device.kind in ("hub", "valve"):
         item.valve_state = get_valve_state()
     return item
@@ -260,7 +279,7 @@ async def update_device(
                        target_type="device", target_id=device.id,
                        device_id=device.id,
                        details={k: v for k, v in body.model_dump(exclude_none=True).items()})
-    item = DeviceOut.model_validate(device)
+    item = _to_device_out(device)
     if device.kind in ("hub", "valve"):
         item.valve_state = get_valve_state()
     return item
@@ -406,7 +425,7 @@ async def pair_device(
                        details={"mac": mac, "kind": kind, "method": device.pairing_method})
 
     log.info("Device paired: %s %s (%s)", kind, mac, device.id)
-    return PairResponse(device=DeviceOut.model_validate(device), message="Device paired successfully")
+    return PairResponse(device=_to_device_out(device), message="Device paired successfully")
 
 
 # ---------------------------------------------------------------------------

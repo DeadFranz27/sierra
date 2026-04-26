@@ -161,21 +161,41 @@ async def _store_moisture(value: float, ts_str: Optional[str]) -> None:
             value_percent=round(value, 1),
         )
         db.add(reading)
+        # A moisture publish IS a heartbeat from the sense node — bump
+        # last_seen on every paired sense so the UI reflects activity.
+        # The current firmware doesn't include a device id in the topic,
+        # so we update them all (single-sense setups in practice).
+        senses = await db.execute(select(Device).where(Device.kind == "sense"))
+        for d in senses.scalars():
+            d.last_seen = ts
         await db.commit()
     log.debug("Stored moisture reading: %.1f%%", value)
 
 
 async def _update_device_status(data: dict) -> None:
+    """Status frames update the hub *and* all paired senses.
+
+    Firmware publishes to sierra/hub/<HUB_ID>/status without a per-device
+    identifier, so we can't tell hub from sense at the topic level. We
+    update both kinds defensively — the sense's RSSI/fw fields belong to
+    the sense, and the hub's own status messages overwrite themselves
+    harmlessly.
+    """
+    now = datetime.now(timezone.utc)
     async with SessionLocal() as db:
-        result = await db.execute(
-            select(Device).where(Device.kind == "hub").limit(1)
-        )
-        device = result.scalar_one_or_none()
-        if device is None:
-            return
-        device.last_seen = datetime.now(timezone.utc)
-        if "rssi" in data:
-            device.wifi_rssi = float(data["rssi"])
-        if "fw" in data:
-            device.firmware_version = str(data["fw"])
-        await db.commit()
+        result = await db.execute(select(Device))
+        any_updated = False
+        for device in result.scalars():
+            if device.kind not in ("hub", "sense", "valve"):
+                continue
+            device.last_seen = now
+            if "rssi" in data:
+                try:
+                    device.wifi_rssi = float(data["rssi"])
+                except (TypeError, ValueError):
+                    pass
+            if "fw" in data:
+                device.firmware_version = str(data["fw"])
+            any_updated = True
+        if any_updated:
+            await db.commit()

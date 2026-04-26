@@ -14,6 +14,7 @@ class DeviceOut(BaseModel):
     id: str
     kind: str
     name: str
+    status: str = "offline"   # online | offline | error | degraded — derived from last_seen + error_flag
     firmware_version: str
     actuator_type: Optional[str] = None
     mac: Optional[str] = None
