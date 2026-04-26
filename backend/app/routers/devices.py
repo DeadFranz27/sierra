@@ -9,7 +9,7 @@ import hashlib
 import logging
 import secrets
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Annotated, Optional
 
 import httpx
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, Response, status
@@ -125,11 +125,14 @@ async def list_devices(
 @limiter.limit("30/minute")
 async def announce_device(
     request: Request,
-    # Explicit Body(...) is required because the slowapi @limiter
-    # decorator wraps the handler in a way that confuses FastAPI's
-    # automatic body inference — without it, Pydantic models get
-    # treated as query parameters and every request 422s.
-    body: DeviceAnnounceIn = Body(...),
+    # Explicit Annotated[..., Body()] is required because:
+    #   1. `from __future__ import annotations` turns every annotation
+    #      into a string forward reference;
+    #   2. slowapi's @limiter decorator wraps the handler in a way that
+    #      breaks FastAPI's automatic body inference for Pydantic models.
+    # Without this combo, requests 422 with {"loc":["query","body"]}
+    # because the model is treated as a query param.
+    body: Annotated[DeviceAnnounceIn, Body()],
     db: AsyncSession = Depends(get_db),
 ):
     if body.kind not in ("sense", "valve"):
