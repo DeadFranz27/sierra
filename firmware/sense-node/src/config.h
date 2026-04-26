@@ -25,8 +25,11 @@
 
 // Zero-touch pairing: while in PAIRING state, the device POSTs to this URL
 // every ANNOUNCE_INTERVAL_MS so the hub UI can discover it without the user
-// ever typing a code. Resolved via mDNS — the Pi advertises sierra-hub.local.
-#define HUB_ANNOUNCE_URL "http://sierra-hub.local/api/devices/announce"
+// ever typing a code. Hardcoded LAN IP for the home Pi — mDNS on the
+// Raspberry advertises the docker bridge instead of the LAN address, so
+// sierra-hub.local resolves to 172.18.0.1 from the device's perspective
+// and the announce never lands.
+#define HUB_ANNOUNCE_URL "http://192.168.3.87/api/devices/announce"
 
 // NVS
 #define NVS_NAMESPACE "sierra"
