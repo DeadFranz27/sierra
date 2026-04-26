@@ -135,7 +135,15 @@ async def announce_device(
     if body.kind not in ("sense", "valve"):
         raise HTTPException(status_code=422, detail="kind must be sense or valve")
 
-    source_ip = request.client.host if request.client else None
+    # nginx proxies the request, so request.client.host is the docker
+    # bridge IP (172.18.0.x), not the device's LAN IP. Prefer the headers
+    # nginx sets (see frontend/nginx.conf). X-Forwarded-For can be a
+    # comma-separated chain when multiple proxies are involved — the
+    # leftmost entry is the original client.
+    fwd = request.headers.get("x-forwarded-for")
+    real = request.headers.get("x-real-ip")
+    raw = request.client.host if request.client else None
+    source_ip = (fwd.split(",")[0].strip() if fwd else None) or real or raw
     if not source_ip:
         raise HTTPException(status_code=400, detail="cannot determine source ip")
 
