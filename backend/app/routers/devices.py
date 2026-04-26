@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.base import get_db
 from app.models.tables import Device, DeviceCandidate, AuditLog
 from app.schemas.device import (
-    DeviceOut, DeviceAnnounceIn, DeviceCandidateOut, PairRequest, PairResponse
+    DeviceOut, DeviceAnnounceIn, DeviceCandidateOut, DeviceUpdate, PairRequest, PairResponse
 )
 
 CANDIDATE_TTL_SECONDS = 300
@@ -225,6 +225,41 @@ async def get_device(
     _: str = Depends(get_current_user),
 ):
     device = await _get_device_or_404(db, device_id)
+    item = DeviceOut.model_validate(device)
+    if device.kind in ("hub", "valve"):
+        item.valve_state = get_valve_state()
+    return item
+
+
+# ---------------------------------------------------------------------------
+# PATCH /api/devices/{id} — rename / clear error
+# ---------------------------------------------------------------------------
+
+@router.patch("/{device_id}", response_model=DeviceOut)
+async def update_device(
+    device_id: str,
+    body: DeviceUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: str = Depends(get_current_user),
+):
+    device = await _get_device_or_404(db, device_id)
+    if body.name is not None:
+        name = body.name.strip()
+        if not name:
+            raise HTTPException(status_code=422, detail="name must not be empty")
+        if len(name) > 64:
+            raise HTTPException(status_code=422, detail="name too long (max 64)")
+        device.name = name
+    if body.error_flag is not None:
+        device.error_flag = body.error_flag
+    if body.error_message is not None:
+        device.error_message = body.error_message
+    await db.commit()
+    await db.refresh(device)
+    await _write_audit(db, "device_update", current_user,
+                       target_type="device", target_id=device.id,
+                       device_id=device.id,
+                       details={k: v for k, v in body.model_dump(exclude_none=True).items()})
     item = DeviceOut.model_validate(device)
     if device.kind in ("hub", "valve"):
         item.valve_state = get_valve_state()

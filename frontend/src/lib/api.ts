@@ -201,11 +201,15 @@ export const api = {
   devices: {
     list: () => request<Device[]>('/api/devices'),
     get: (id: string) => request<Device>(`/api/devices/${id}`),
+    update: (id: string, body: { name?: string; error_flag?: boolean; error_message?: string | null }) =>
+      request<Device>(`/api/devices/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
     candidates: (kind?: 'sense' | 'valve') =>
       request<DeviceCandidate[]>(`/api/devices/candidates${kind ? `?kind=${kind}` : ''}`),
     restart: (id: string) => request<void>(`/api/devices/${id}/restart`, { method: 'POST' }),
     clearError: (id: string) => request<Device>(`/api/devices/${id}/clear-error`, { method: 'POST' }),
     unpair: (id: string) => request<void>(`/api/devices/${id}/unpair`, { method: 'POST' }),
+    factoryReset: (id: string) => request<void>(`/api/devices/${id}/factory-reset`, { method: 'POST' }),
+    reprovisionWifi: (id: string) => request<void>(`/api/devices/${id}/reprovision-wifi`, { method: 'POST' }),
     pair: (body: { device_id?: string; ip?: string; pairing_code?: string }) =>
       request<Device>('/api/devices/pair', { method: 'POST', body: JSON.stringify(body) }),
   },

@@ -85,6 +85,9 @@ type DeviceCardProps = {
   onRestart: (id: string) => void
   onClearError: (id: string) => void
   onUnpair: (id: string) => void
+  onRename: (device: Device) => void
+  onFactoryReset: (device: Device) => void
+  onReprovisionWifi: (device: Device) => void
   restarting: string | null
   onAddDevice?: () => void
 }
@@ -116,7 +119,7 @@ function HubCard({ device }: { device: Device | undefined }) {
   )
 }
 
-function SenseCard({ device, onRestart, onClearError, restarting, onAddDevice }: DeviceCardProps) {
+function SenseCard({ device, onRestart, onClearError, onUnpair, onRename, onFactoryReset, onReprovisionWifi, restarting, onAddDevice }: DeviceCardProps) {
   if (!device) {
     return (
       <div style={cardStyle}>
@@ -131,7 +134,14 @@ function SenseCard({ device, onRestart, onClearError, restarting, onAddDevice }:
   const tone = deviceTone(device)
   return (
     <div style={cardStyle}>
-      <CardHeader icon="activity" title="Sierra Sense" subtitle={`ESP32 · ${device.ip_address ?? '—'}`} tone={tone} statusLabel={statusLabel(device)} />
+      <CardHeader
+        icon="activity"
+        title={device.name || 'Sierra Sense'}
+        subtitle={`ESP32 · ${device.ip_address ?? '—'}`}
+        tone={tone}
+        statusLabel={statusLabel(device)}
+        onRename={() => onRename(device)}
+      />
       {device.error_flag && device.error_message && (
         <ErrorBanner message={device.error_message} />
       )}
@@ -149,12 +159,15 @@ function SenseCard({ device, onRestart, onClearError, restarting, onAddDevice }:
         restarting={restarting}
         onRestart={onRestart}
         onClearError={onClearError}
+        onUnpair={onUnpair}
+        onReprovisionWifi={() => onReprovisionWifi(device)}
+        onFactoryReset={() => onFactoryReset(device)}
       />
     </div>
   )
 }
 
-function ValveCard({ device, onRestart, onClearError, onUnpair, restarting, onAddDevice }: DeviceCardProps) {
+function ValveCard({ device, onRestart, onClearError, onUnpair, onRename, onFactoryReset, onReprovisionWifi, restarting, onAddDevice }: DeviceCardProps) {
   if (!device) {
     return (
       <div style={cardStyle}>
@@ -178,7 +191,14 @@ function ValveCard({ device, onRestart, onClearError, onUnpair, restarting, onAd
 
   return (
     <div style={cardStyle}>
-      <CardHeader icon="droplet" title="Sierra Valve" subtitle={`ESP32 · ${device.ip_address ?? '—'}`} tone={tone} statusLabel={statusLabel(device)} />
+      <CardHeader
+        icon="droplet"
+        title={device.name || 'Sierra Valve'}
+        subtitle={`ESP32 · ${device.ip_address ?? '—'}`}
+        tone={tone}
+        statusLabel={statusLabel(device)}
+        onRename={() => onRename(device)}
+      />
       {device.error_flag && device.error_message && (
         <ErrorBanner message={device.error_message} />
       )}
@@ -214,6 +234,8 @@ function ValveCard({ device, onRestart, onClearError, onUnpair, restarting, onAd
         onRestart={onRestart}
         onClearError={onClearError}
         onUnpair={onUnpair}
+        onReprovisionWifi={() => onReprovisionWifi(device)}
+        onFactoryReset={() => onFactoryReset(device)}
       />
     </div>
   )
@@ -221,7 +243,7 @@ function ValveCard({ device, onRestart, onClearError, onUnpair, restarting, onAd
 
 // ─── sub-components ─────────────────────────────────────────────────────────
 
-function CardHeader({ icon, title, subtitle, tone, statusLabel }: { icon: IconName; title: string; subtitle: string; tone: 'good' | 'warn' | 'bad' | 'neutral'; statusLabel: string }) {
+function CardHeader({ icon, title, subtitle, tone, statusLabel, onRename }: { icon: IconName; title: string; subtitle: string; tone: 'good' | 'warn' | 'bad' | 'neutral'; statusLabel: string; onRename?: () => void }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 4 }}>
       <div style={{
@@ -235,6 +257,20 @@ function CardHeader({ icon, title, subtitle, tone, statusLabel }: { icon: IconNa
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <StatusDot tone={tone} />
           <span style={{ fontFamily: 'var(--font-display)', fontSize: 20, color: 'var(--fg-brand)', lineHeight: 1.2 }}>{title}</span>
+          {onRename && (
+            <button
+              onClick={onRename}
+              title="Rename"
+              aria-label="Rename device"
+              style={{
+                background: 'none', border: 'none', padding: 4, cursor: 'pointer',
+                color: 'var(--fg-muted)', display: 'inline-flex', alignItems: 'center',
+                borderRadius: 'var(--rad-sm)',
+              }}
+            >
+              <Icon name="edit" size={13} />
+            </button>
+          )}
         </div>
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fg-muted)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{subtitle}</div>
       </div>
@@ -256,11 +292,13 @@ function ErrorBanner({ message }: { message: string }) {
   )
 }
 
-function CardActions({ deviceId, tone, hasError, restarting, onRestart, onClearError, onUnpair }: {
+function CardActions({ deviceId, tone, hasError, restarting, onRestart, onClearError, onUnpair, onReprovisionWifi, onFactoryReset }: {
   deviceId: string; tone: string; hasError: boolean; restarting: string | null
   onRestart: (id: string) => void
   onClearError: (id: string) => void
   onUnpair?: (id: string) => void
+  onReprovisionWifi?: () => void
+  onFactoryReset?: () => void
 }) {
   const busy = restarting === deviceId
   return (
@@ -281,10 +319,22 @@ function CardActions({ deviceId, tone, hasError, restarting, onRestart, onClearE
           Clear error
         </button>
       )}
+      {onReprovisionWifi && (
+        <button onClick={onReprovisionWifi} style={secondaryBtnStyle}>
+          <Icon name="wifiOff" size={13} />
+          Wi-Fi setup
+        </button>
+      )}
       {onUnpair && (
         <button onClick={() => onUnpair(deviceId)} style={{ ...secondaryBtnStyle, color: 'var(--clay-500)', borderColor: 'var(--clay-300)' }}>
           <Icon name="unlink" size={13} />
           Unpair
+        </button>
+      )}
+      {onFactoryReset && (
+        <button onClick={onFactoryReset} style={{ ...secondaryBtnStyle, color: 'var(--clay-500)', borderColor: 'var(--clay-300)' }}>
+          <Icon name="trash" size={13} />
+          Factory reset
         </button>
       )}
     </div>
@@ -745,6 +795,13 @@ export function DeviceScreen() {
   const [unpairTarget, setUnpairTarget] = useState<Device | null>(null)
   const [unpairing, setUnpairing] = useState(false)
   const [showPairModal, setShowPairModal] = useState(false)
+  const [renameTarget, setRenameTarget] = useState<Device | null>(null)
+  const [renameValue, setRenameValue] = useState('')
+  const [renaming, setRenaming] = useState(false)
+  const [factoryResetTarget, setFactoryResetTarget] = useState<Device | null>(null)
+  const [factoryResetting, setFactoryResetting] = useState(false)
+  const [reprovisionTarget, setReprovisionTarget] = useState<Device | null>(null)
+  const [reprovisioning, setReprovisioning] = useState(false)
 
   const load = useCallback(async () => {
     try {
@@ -803,6 +860,60 @@ export function DeviceScreen() {
     }
   }
 
+  function openRename(device: Device) {
+    setRenameValue(device.name)
+    setRenameTarget(device)
+  }
+
+  async function handleRename() {
+    if (!renameTarget) return
+    const name = renameValue.trim()
+    if (!name) { toast('Name cannot be empty', 'bad'); return }
+    if (name === renameTarget.name) { setRenameTarget(null); return }
+    setRenaming(true)
+    try {
+      const updated = await api.devices.update(renameTarget.id, { name })
+      setDevices(prev => prev.map(d => d.id === updated.id ? updated : d))
+      toast('Renamed', 'good')
+      setRenameTarget(null)
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Could not rename'
+      toast(msg.includes('422') ? 'Invalid name' : 'Could not rename', 'bad')
+    } finally {
+      setRenaming(false)
+    }
+  }
+
+  async function handleFactoryReset() {
+    if (!factoryResetTarget) return
+    setFactoryResetting(true)
+    try {
+      await api.devices.factoryReset(factoryResetTarget.id)
+      toast(`${factoryResetTarget.name} factory reset — it will reboot unprovisioned`, 'good')
+      setFactoryResetTarget(null)
+      load()
+    } catch {
+      toast('Could not factory reset', 'bad')
+    } finally {
+      setFactoryResetting(false)
+    }
+  }
+
+  async function handleReprovisionWifi() {
+    if (!reprovisionTarget) return
+    setReprovisioning(true)
+    try {
+      await api.devices.reprovisionWifi(reprovisionTarget.id)
+      toast(`${reprovisionTarget.name} will restart in Wi-Fi setup mode`, 'good')
+      setReprovisionTarget(null)
+      load()
+    } catch {
+      toast('Could not start Wi-Fi setup', 'bad')
+    } finally {
+      setReprovisioning(false)
+    }
+  }
+
   const hub   = devices.find(d => d.kind === 'hub')
   const sense = devices.find(d => d.kind === 'sense')
   const valve = devices.find(d => d.kind === 'valve')
@@ -848,8 +959,28 @@ export function DeviceScreen() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <HubCard device={hub} />
           <LocationCard />
-          <SenseCard device={sense} onRestart={handleRestart} onClearError={handleClearError} onUnpair={d => { const dev = devices.find(x => x.id === d); if (dev) setUnpairTarget(dev) }} restarting={restarting} onAddDevice={() => setShowPairModal(true)} />
-          <ValveCard device={valve} onRestart={handleRestart} onClearError={handleClearError} onUnpair={d => { const dev = devices.find(x => x.id === d); if (dev) setUnpairTarget(dev) }} restarting={restarting} onAddDevice={() => setShowPairModal(true)} />
+          <SenseCard
+            device={sense}
+            onRestart={handleRestart}
+            onClearError={handleClearError}
+            onUnpair={d => { const dev = devices.find(x => x.id === d); if (dev) setUnpairTarget(dev) }}
+            onRename={openRename}
+            onFactoryReset={d => setFactoryResetTarget(d)}
+            onReprovisionWifi={d => setReprovisionTarget(d)}
+            restarting={restarting}
+            onAddDevice={() => setShowPairModal(true)}
+          />
+          <ValveCard
+            device={valve}
+            onRestart={handleRestart}
+            onClearError={handleClearError}
+            onUnpair={d => { const dev = devices.find(x => x.id === d); if (dev) setUnpairTarget(dev) }}
+            onRename={openRename}
+            onFactoryReset={d => setFactoryResetTarget(d)}
+            onReprovisionWifi={d => setReprovisionTarget(d)}
+            restarting={restarting}
+            onAddDevice={() => setShowPairModal(true)}
+          />
         </div>
       )}
 
@@ -876,6 +1007,83 @@ export function DeviceScreen() {
               }}
             >
               {unpairing ? 'Unpairing…' : 'Unpair'}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* Rename modal */}
+      {renameTarget && (
+        <Modal title={`Rename ${renameTarget.name}`} onClose={() => setRenameTarget(null)} width={420}>
+          <p style={{ color: 'var(--fg-muted)', fontFamily: 'var(--font-sans)', fontSize: 13, lineHeight: 1.6, marginBottom: 16 }}>
+            Pick a name that helps you tell devices apart — e.g. "Greenhouse Sense" or "Patio Valve".
+          </p>
+          <input
+            autoFocus
+            value={renameValue}
+            onChange={e => setRenameValue(e.target.value.slice(0, 64))}
+            onKeyDown={e => { if (e.key === 'Enter') handleRename() }}
+            placeholder="Device name"
+            maxLength={64}
+            style={{
+              width: '100%', padding: '10px 12px', fontFamily: 'var(--font-sans)', fontSize: 14,
+              border: '1px solid var(--border)', borderRadius: 'var(--rad-sm)',
+              background: 'var(--bg)', color: 'var(--fg)', boxSizing: 'border-box', marginBottom: 20,
+            }}
+          />
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <button onClick={() => setRenameTarget(null)} style={secondaryBtnStyle}>Cancel</button>
+            <button
+              onClick={handleRename}
+              disabled={renaming || !renameValue.trim()}
+              style={{ ...primaryBtnStyle, opacity: (renaming || !renameValue.trim()) ? 0.5 : 1 }}
+            >
+              {renaming ? 'Saving…' : 'Save'}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* Wi-Fi reprovision confirmation */}
+      {reprovisionTarget && (
+        <Modal title={`Wi-Fi setup for ${reprovisionTarget.name}?`} onClose={() => setReprovisionTarget(null)} width={420}>
+          <p style={{ color: 'var(--fg-muted)', fontFamily: 'var(--font-sans)', fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
+            The device will reboot and come back as a Wi-Fi access point so you can join it from your phone and pick a new network. Pairing credentials are kept — no need to re-pair.
+          </p>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <button onClick={() => setReprovisionTarget(null)} style={secondaryBtnStyle}>Cancel</button>
+            <button
+              onClick={handleReprovisionWifi}
+              disabled={reprovisioning}
+              style={{ ...primaryBtnStyle, opacity: reprovisioning ? 0.6 : 1 }}
+            >
+              {reprovisioning ? 'Sending…' : 'Restart for Wi-Fi setup'}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* Factory reset confirmation */}
+      {factoryResetTarget && (
+        <Modal title={`Factory reset ${factoryResetTarget.name}?`} onClose={() => setFactoryResetTarget(null)} width={440}>
+          <p style={{ color: 'var(--fg-muted)', fontFamily: 'var(--font-sans)', fontSize: 14, lineHeight: 1.6, marginBottom: 16 }}>
+            This wipes all settings on the device — Wi-Fi credentials, pairing, calibration. The device will reboot as a brand-new unit and you'll need to set it up from scratch.
+          </p>
+          <p style={{ color: 'var(--clay-500)', fontFamily: 'var(--font-sans)', fontSize: 12, lineHeight: 1.5, marginBottom: 24 }}>
+            This cannot be undone.
+          </p>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <button onClick={() => setFactoryResetTarget(null)} style={secondaryBtnStyle}>Cancel</button>
+            <button
+              onClick={handleFactoryReset}
+              disabled={factoryResetting}
+              style={{
+                padding: '8px 18px', background: 'var(--clay-500)', color: '#fff',
+                border: 'none', borderRadius: 'var(--rad-sm)', fontFamily: 'var(--font-sans)',
+                fontSize: 13, fontWeight: 600, cursor: factoryResetting ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {factoryResetting ? 'Resetting…' : 'Factory reset'}
             </button>
           </div>
         </Modal>
