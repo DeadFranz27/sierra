@@ -1,13 +1,21 @@
-// Sierra is a hub product: timestamps come from the broker as UTC and we
-// always render them in the hub's local timezone (Europe/Rome). Hardcoding
-// the IANA zone keeps tooltips correct when the user opens the UI from a
-// laptop or phone configured for a different region.
-const TZ = 'Europe/Rome'
+// All readings/runs/alerts are stored UTC in the backend. The viewer should
+// see them in the *hub's* timezone (the garden's clock), regardless of which
+// device they're using. setHubTimezone is called once at app boot from the
+// /api/settings/location response.
+let HUB_TZ: string = Intl.DateTimeFormat().resolvedOptions().timeZone
 const LOCALE = 'en-GB'
+
+export function setHubTimezone(tz: string | undefined | null): void {
+  if (tz && typeof tz === 'string') HUB_TZ = tz
+}
+
+export function getHubTimezone(): string {
+  return HUB_TZ
+}
 
 export function fmtHHMM(input: string | Date): string {
   const d = typeof input === 'string' ? new Date(input) : input
-  return d.toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit', timeZone: TZ })
+  return d.toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit', timeZone: HUB_TZ })
 }
 
 export function fmtRelative(input: string | Date): string {
@@ -16,11 +24,11 @@ export function fmtRelative(input: string | Date): string {
   const diffDays = Math.floor((today.getTime() - d.getTime()) / 86_400_000)
   if (diffDays === 0) return fmtHHMM(d)
   if (diffDays === 1) return `Yesterday ${fmtHHMM(d)}`
-  return d.toLocaleDateString(LOCALE, { weekday: 'short', hour: '2-digit', minute: '2-digit', timeZone: TZ })
+  return d.toLocaleDateString(LOCALE, { weekday: 'short', hour: '2-digit', minute: '2-digit', timeZone: HUB_TZ })
 }
 
 export function fmtTodayLong(d: Date = new Date()): string {
-  return d.toLocaleDateString(LOCALE, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: TZ })
+  return d.toLocaleDateString(LOCALE, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: HUB_TZ })
 }
 
 // Used by the sparkline X-axis. Picks ~5 evenly spaced labels from the

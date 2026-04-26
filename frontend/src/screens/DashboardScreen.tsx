@@ -22,7 +22,7 @@ async function fetchWeatherHistory(hours: WeatherWindow): Promise<WeatherPoint[]
     const d = new Date(p.time)
     const label = hours === 24
       ? fmtHHMM(d)
-      : d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', timeZone: 'Europe/Rome' })
+      : d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })
     points.push({ label, mm: p.precipitation_mm, wind: p.wind_kmh })
   }
 

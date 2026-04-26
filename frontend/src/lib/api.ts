@@ -109,6 +109,7 @@ export type HubLocation = {
   label: string
   latitude: number
   longitude: number
+  timezone?: string  // IANA tz id; populated by GET, omitted on PUT (server derives it)
 }
 
 export type OnboardingProgress = {
@@ -216,9 +217,22 @@ export const api = {
   },
 
   settings: {
-    getLocation: () => request<HubLocation | null>('/api/settings/location'),
-    setLocation: (body: HubLocation) =>
-      request<HubLocation>('/api/settings/location', { method: 'PUT', body: JSON.stringify(body) }),
+    getLocation: async () => {
+      const loc = await request<HubLocation | null>('/api/settings/location')
+      if (loc?.timezone) {
+        const { setHubTimezone } = await import('./time')
+        setHubTimezone(loc.timezone)
+      }
+      return loc
+    },
+    setLocation: async (body: HubLocation) => {
+      const loc = await request<HubLocation>('/api/settings/location', { method: 'PUT', body: JSON.stringify(body) })
+      if (loc.timezone) {
+        const { setHubTimezone } = await import('./time')
+        setHubTimezone(loc.timezone)
+      }
+      return loc
+    },
     geocode: (q: string) =>
       request<{ label: string; latitude: number; longitude: number } | null>(
         `/api/settings/geocode?q=${encodeURIComponent(q)}`,

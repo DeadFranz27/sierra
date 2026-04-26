@@ -3,6 +3,7 @@ from __future__ import annotations
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel
+from timezonefinder import TimezoneFinder
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,11 +18,19 @@ NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 NOMINATIM_UA = "Sierra-Hub/0.3 (https://github.com/DeadFranz27/sierra)"
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
 
+# Singleton — first call loads ~50MB of polygon data into RSS, then is fast.
+_tzfinder = TimezoneFinder()
+
+
+def _tz_for(lat: float, lon: float) -> str:
+    return _tzfinder.timezone_at(lat=lat, lng=lon) or "UTC"
+
 
 class LocationOut(BaseModel):
     label: str
     latitude: float
     longitude: float
+    timezone: str  # IANA tz id, e.g. "Europe/Rome" — derived from lat/lon
 
 
 class LocationIn(BaseModel):
@@ -72,7 +81,12 @@ async def get_location(
     lon = await _get_setting(db, "location_lon")
     if lat is None or lon is None:
         return None
-    return LocationOut(label=label or "", latitude=float(lat), longitude=float(lon))
+    tz = await _get_setting(db, "location_tz")
+    if not tz:
+        # Backfill for locations stored before tz tracking landed.
+        tz = _tz_for(float(lat), float(lon))
+        await _set_setting(db, "location_tz", tz)
+    return LocationOut(label=label or "", latitude=float(lat), longitude=float(lon), timezone=tz)
 
 
 @router.put("/location", response_model=LocationOut)
@@ -81,10 +95,12 @@ async def set_location(
     db: AsyncSession = Depends(get_db),
     _: str = Depends(get_current_user),
 ):
+    tz = _tz_for(body.latitude, body.longitude)
     await _set_setting(db, "location_label", body.label)
     await _set_setting(db, "location_lat", str(body.latitude))
     await _set_setting(db, "location_lon", str(body.longitude))
-    return LocationOut(label=body.label, latitude=body.latitude, longitude=body.longitude)
+    await _set_setting(db, "location_tz", tz)
+    return LocationOut(label=body.label, latitude=body.latitude, longitude=body.longitude, timezone=tz)
 
 
 @router.get("/geocode", response_model=GeocodeHit | None)
