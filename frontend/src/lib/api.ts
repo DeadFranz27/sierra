@@ -206,7 +206,7 @@ export const api = {
     restart: (id: string) => request<void>(`/api/devices/${id}/restart`, { method: 'POST' }),
     clearError: (id: string) => request<Device>(`/api/devices/${id}/clear-error`, { method: 'POST' }),
     unpair: (id: string) => request<void>(`/api/devices/${id}/unpair`, { method: 'POST' }),
-    pair: (body: { device_id?: string; ip?: string; pairing_code: string }) =>
+    pair: (body: { device_id?: string; ip?: string; pairing_code?: string }) =>
       request<Device>('/api/devices/pair', { method: 'POST', body: JSON.stringify(body) }),
   },
 
