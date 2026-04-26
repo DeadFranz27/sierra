@@ -21,7 +21,7 @@ from app.routers import settings as settings_router
 from app.routers import alerts as alerts_router
 from app.routers import onboarding as onboarding_router
 from app.security.rate_limit import limiter
-from app.services.seed import seed_presets
+from app.services.seed import seed_presets, seed_hub
 from app.services.mqtt_bridge import run_bridge
 from app.services.scheduler import start_scheduler, stop_scheduler, reload_schedules
 
@@ -47,6 +47,7 @@ async def lifespan(app: FastAPI):
     await init_db()
     async with SessionLocal() as db:
         await seed_presets(db)
+        await seed_hub(db)
     asyncio.create_task(run_bridge())
     log.info("MQTT bridge started")
     start_scheduler(settings.timezone)

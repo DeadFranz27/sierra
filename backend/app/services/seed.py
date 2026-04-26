@@ -1,18 +1,21 @@
 """
 Seed services:
   - seed_presets: loads plant_presets.json into DB (idempotent, version-aware)
+  - seed_hub: ensures a Device(kind="hub") row exists for the local hub
 """
 from __future__ import annotations
 
 import json
 import logging
+import socket
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.tables import PlantProfile
+from app.models.tables import Device, PlantProfile
 
 log = logging.getLogger(__name__)
 
@@ -46,6 +49,33 @@ async def seed_presets(db: AsyncSession) -> None:
             log.info("Updated preset: %s (version %d → %d)", p["name"], existing.seed_version, file_version)
 
     await db.commit()
+
+
+async def seed_hub(db: AsyncSession) -> None:
+    """Ensure a Device(kind='hub') row exists. Idempotent.
+
+    The hub is the host this backend runs on — it never goes through the
+    /announce → /pair flow that ESP devices use, so without this seed the
+    UI would always show 'NOT DETECTED' on the Devices page.
+    """
+    result = await db.execute(select(Device).where(Device.kind == "hub").limit(1))
+    if result.scalar_one_or_none() is not None:
+        return
+    try:
+        hostname = socket.gethostname()
+    except Exception:
+        hostname = "sierra-hub"
+    db.add(Device(
+        id=str(uuid.uuid4()),
+        kind="hub",
+        name=hostname or "Sierra Hub",
+        firmware_version="local",
+        last_seen=datetime.now(timezone.utc),
+        paired_at=datetime.now(timezone.utc),
+        pairing_method="local",
+    ))
+    await db.commit()
+    log.info("Seeded local hub Device row (hostname=%s)", hostname)
 
 
 def _preset_fields(p: dict) -> dict:

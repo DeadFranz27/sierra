@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.base import get_db
-from app.models.tables import OnboardingProgress
+from app.models.tables import OnboardingProgress, Zone
 from app.schemas.onboarding import OnboardingProgressOut, OnboardingProgressUpdate
 from app.security.deps import get_current_user
 
@@ -29,6 +29,17 @@ async def _get_or_create(db: AsyncSession) -> OnboardingProgress:
         db.add(row)
         await db.commit()
         await db.refresh(row)
+    # Self-heal: if the hub already has zones, treat the wizard as done.
+    # Reason: a redeploy or DB reset can wipe the onboarding row while the
+    # rest of the system is fully configured — without this, the user sees
+    # the wizard flash on every reload until they click Skip/Finish.
+    if row.completed_at is None:
+        zones_exist = await db.execute(select(Zone.id).limit(1))
+        if zones_exist.scalar_one_or_none() is not None:
+            row.completed_at = datetime.now(timezone.utc)
+            row.current_step = 9
+            await db.commit()
+            await db.refresh(row)
     return row
 
 
