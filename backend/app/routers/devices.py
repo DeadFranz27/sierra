@@ -9,10 +9,10 @@ import hashlib
 import logging
 import secrets
 from datetime import datetime, timedelta, timezone
-from typing import Annotated, Optional
+from typing import Optional
 
 import httpx
-from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,7 +21,6 @@ from app.models.tables import Device, DeviceCandidate, AuditLog
 from app.schemas.device import (
     DeviceOut, DeviceAnnounceIn, DeviceCandidateOut, PairRequest, PairResponse
 )
-from app.security.rate_limit import limiter
 
 CANDIDATE_TTL_SECONDS = 300
 from app.security.auth import hash_password
@@ -122,19 +121,17 @@ async def list_devices(
 # out by GET /candidates.
 
 @router.post("/announce", status_code=status.HTTP_204_NO_CONTENT)
-@limiter.limit("30/minute")
 async def announce_device(
     request: Request,
-    # Explicit Annotated[..., Body()] is required because:
-    #   1. `from __future__ import annotations` turns every annotation
-    #      into a string forward reference;
-    #   2. slowapi's @limiter decorator wraps the handler in a way that
-    #      breaks FastAPI's automatic body inference for Pydantic models.
-    # Without this combo, requests 422 with {"loc":["query","body"]}
-    # because the model is treated as a query param.
-    body: Annotated[DeviceAnnounceIn, Body()],
+    body: DeviceAnnounceIn,
     db: AsyncSession = Depends(get_db),
 ):
+    # NOTE: no @limiter.limit here. slowapi's decorator combined with
+    # `from __future__ import annotations` breaks FastAPI's body inference
+    # (every request 422s with {"loc":["query","body"]}). The endpoint is
+    # LAN-only via nginx and the backend is bound to localhost; abuse
+    # surface is minimal. If we ever expose this beyond LAN, gate it with
+    # an IP-allowlist middleware instead of slowapi.
     if body.kind not in ("sense", "valve"):
         raise HTTPException(status_code=422, detail="kind must be sense or valve")
 
