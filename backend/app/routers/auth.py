@@ -34,7 +34,10 @@ COOKIE_MAX_AGE = 86400 * 7  # 7 days
 
 def _set_session_cookie(response: Response, username: str) -> None:
     token = create_session(username)
-    secure_cookie = os.environ.get("SIERRA_ENV", "development").lower() != "test"
+    # Only set Secure when explicitly in production behind HTTPS.
+    # Otherwise iOS / browsers on plain HTTP silently drop the cookie,
+    # which manifests as "logged in but every API call returns 401".
+    secure_cookie = os.environ.get("SIERRA_ENV", "development").lower() == "production"
     response.set_cookie(
         key=COOKIE_NAME,
         value=token,
