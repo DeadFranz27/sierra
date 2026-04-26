@@ -43,14 +43,14 @@ def _read_lines() -> list[str]:
 
 
 def _write_lines(lines: list[str]) -> None:
-    # Atomic-ish write: temp file + rename keeps mosquitto from reading a
-    # half-written file when SIGHUP fires. Same directory so rename is atomic.
-    tmp = f"{PASSWD_PATH}.tmp"
-    with open(tmp, "w") as f:
-        f.write("\n".join(lines))
-        if lines:
-            f.write("\n")
-    os.replace(tmp, PASSWD_PATH)
+    # Truncate-and-rewrite in place. Can't temp+rename because the parent dir
+    # is owned by root in the backend container and we'd hit EACCES; the host
+    # bind-mount only gives us write access to the file itself.
+    body = "\n".join(lines) + ("\n" if lines else "")
+    with open(PASSWD_PATH, "w") as f:
+        f.write(body)
+        f.flush()
+        os.fsync(f.fileno())
 
 
 def add_user(username: str, password: str) -> None:
