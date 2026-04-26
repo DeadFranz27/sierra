@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { ReactNode } from 'react'
 import { Icon } from './Icon'
 
@@ -22,11 +23,20 @@ export function Modal({ title, onClose, children, width = 480 }: Props) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') handleClose() }
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    // Lock background scroll while the modal is open.
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prevOverflow
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  return (
+  // Portal to document.body so the modal escapes any ancestor that creates
+  // a containing block for `position: fixed` (transforms, filters, etc.)
+  // — e.g. the `fade-in-up` page wrapper in Layout.
+  return createPortal((
     <div
       onClick={handleClose}
       style={{
@@ -81,5 +91,5 @@ export function Modal({ title, onClose, children, width = 480 }: Props) {
         </div>
       </div>
     </div>
-  )
+  ), document.body)
 }
