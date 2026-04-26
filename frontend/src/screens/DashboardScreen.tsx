@@ -4,6 +4,7 @@ import type { Zone, Run, HubLocation } from '../lib/api'
 import { Stat } from '../components/Stat'
 import { Sparkline } from '../components/Sparkline'
 import { Icon } from '../components/Icon'
+import { fmtHHMM, fmtRelative, fmtTodayLong, spreadAxisLabels } from '../lib/time'
 
 type WeatherWindow = 24 | 168
 
@@ -20,8 +21,8 @@ async function fetchWeatherHistory(hours: WeatherWindow): Promise<WeatherPoint[]
     if (ts < cutoff || ts > now) continue
     const d = new Date(p.time)
     const label = hours === 24
-      ? d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
-      : d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })
+      ? fmtHHMM(d)
+      : d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', timeZone: 'Europe/Rome' })
     points.push({ label, mm: p.precipitation_mm, wind: p.wind_kmh })
   }
 
@@ -115,18 +116,8 @@ function BarChart({ points, valueKey, color, unit, labelStep, summary }: {
   )
 }
 
-function todayLabel() {
-  return new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-}
-
-function formatTime(iso: string) {
-  const d = new Date(iso)
-  const now = new Date()
-  const diffDays = Math.floor((now.getTime() - d.getTime()) / 86400000)
-  if (diffDays === 0) return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
-  if (diffDays === 1) return `Yesterday ${d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
-  return d.toLocaleDateString('en-GB', { weekday: 'short', hour: '2-digit', minute: '2-digit' })
-}
+const todayLabel = () => fmtTodayLong()
+const formatTime = (iso: string) => fmtRelative(iso)
 
 type Props = { onNavigate: (p: string) => void }
 
@@ -134,6 +125,7 @@ export function DashboardScreen({ onNavigate }: Props) {
   const [zones, setZones] = useState<Zone[]>([])
   const [history, setHistory] = useState<number[]>([])
   const [historyLabels, setHistoryLabels] = useState<string[]>([])
+  const [historyAxis, setHistoryAxis] = useState<string[]>([])
   const [recentRuns, setRecentRuns] = useState<(Run & { zoneName: string })[]>([])
   const [loading, setLoading] = useState(true)
   const [weatherPoints, setWeatherPoints] = useState<WeatherPoint[]>([])
@@ -157,7 +149,8 @@ export function DashboardScreen({ onNavigate }: Props) {
           const hist = await api.zones.history(zs[0].id, 24)
           if (mounted) {
             setHistory(hist.map(r => r.value_percent))
-            setHistoryLabels(hist.map(r => new Date(r.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })))
+            setHistoryLabels(hist.map(r => fmtHHMM(r.timestamp)))
+            setHistoryAxis(spreadAxisLabels(hist.map(r => r.timestamp)))
           }
           const allRuns: (Run & { zoneName: string })[] = []
           for (const z of zs) {
@@ -290,7 +283,10 @@ export function DashboardScreen({ onNavigate }: Props) {
             : <div style={{ height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-muted)', fontFamily: 'var(--font-sans)', fontSize: 13 }}>No readings yet</div>
           }
           <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fg-muted)', marginTop: 6 }}>
-            <span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>now</span>
+            {historyAxis.length > 0
+              ? historyAxis.map((label, i) => <span key={i}>{label}</span>)
+              : <><span>—</span><span>—</span><span>—</span><span>—</span><span>now</span></>
+            }
           </div>
         </div>
 

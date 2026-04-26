@@ -7,6 +7,7 @@ import { Stat } from '../components/Stat'
 import { Icon } from '../components/Icon'
 import { Modal } from '../components/Modal'
 import { toast } from '../components/Toast'
+import { fmtHHMM } from '../lib/time'
 
 function WaterModal({ maxMin, defaultMin, onConfirm, onClose }: { maxMin: number; defaultMin: number; onConfirm: (d: number) => void; onClose: () => void }) {
   const [duration, setDuration] = useState(Math.min(defaultMin, maxMin))
@@ -177,7 +178,7 @@ export function ZoneDetailScreen({ zoneId, onBack }: Props) {
   const latestMoisture = history.length > 0 ? history[history.length - 1].value_percent : null
   const latestTemp = history.length > 0 ? history[history.length - 1].temp_c : null
   const sparkData = history.map(r => r.value_percent)
-  const sparkLabels = history.map(r => new Date(r.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }))
+  const sparkLabels = history.map(r => fmtHHMM(r.timestamp))
   const profile = zone.active_profile
 
   const moistureTone = (v: number) => v < 40 ? 'warn' : v > 75 ? 'info' : 'good'
