@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Icon } from './Icon'
 
@@ -10,20 +10,32 @@ type Props = {
 }
 
 export function Modal({ title, onClose, children, width = 480 }: Props) {
+  const [closing, setClosing] = useState(false)
+
+  function handleClose() {
+    if (closing) return
+    setClosing(true)
+    // Match the exit animation duration below.
+    setTimeout(onClose, 160)
+  }
+
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') handleClose() }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <div
-      onClick={onClose}
+      onClick={handleClose}
       style={{
         position: 'fixed', inset: 0,
         background: 'rgba(27,25,21,.45)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         zIndex: 1000, padding: 24,
+        animation: closing ? 'fadeIn 160ms var(--ease-standard) reverse forwards' : 'fadeIn 160ms var(--ease-standard)',
+        backdropFilter: 'blur(2px)',
       }}
     >
       <div
@@ -37,6 +49,10 @@ export function Modal({ title, onClose, children, width = 480 }: Props) {
           display: 'flex', flexDirection: 'column',
           maxHeight: '90vh',
           overflow: 'hidden',
+          animation: closing
+            ? 'modalPop 160ms var(--ease-standard) reverse forwards'
+            : 'modalPop 220ms var(--ease-standard)',
+          transformOrigin: 'center',
         }}
       >
         <div style={{
@@ -49,7 +65,8 @@ export function Modal({ title, onClose, children, width = 480 }: Props) {
             fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 16, color: 'var(--fg)',
           }}>{title}</div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
+            className="icon-btn"
             style={{
               width: 30, height: 30, borderRadius: 8,
               border: '1px solid var(--border)',

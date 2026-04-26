@@ -6,6 +6,8 @@ import { Icon } from '../components/Icon'
 import type { IconName } from '../components/Icon'
 import { Badge } from '../components/Badge'
 import { Modal } from '../components/Modal'
+import { PageHeader } from '../components/PageHeader'
+import { Skeleton } from '../components/Skeleton'
 import { toast } from '../components/Toast'
 
 // ─── helpers ───────────────────────────────────────────────────────────────
@@ -349,6 +351,8 @@ const cardStyle: React.CSSProperties = {
   border: '1px solid var(--border)',
   borderRadius: 'var(--rad-lg)',
   boxShadow: 'var(--elev-1)',
+  transition:
+    'transform var(--dur-base) var(--ease-standard), box-shadow var(--dur-base) var(--ease-standard), border-color var(--dur-base) var(--ease-standard)',
 }
 
 const secondaryBtnStyle: React.CSSProperties = {
@@ -932,31 +936,31 @@ export function DeviceScreen() {
 
   return (
     <div style={{ padding: '28px 28px 48px', maxWidth: 900 }}>
-      {/* Header */}
-      <div style={{ marginBottom: 24 }}>
-        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, letterSpacing: 'var(--tracking-eyebrow)', textTransform: 'uppercase', color: 'var(--fg-muted)', marginBottom: 6 }}>
-          Your Sierra system
-        </div>
-        <h1 style={{ marginBottom: 6 }}>Devices</h1>
-        <p style={{ color: 'var(--fg-muted)', fontFamily: 'var(--font-sans)', fontSize: 14 }}>{summaryLine}</p>
-      </div>
-
-      {/* Actions bar */}
-      <div style={{ marginBottom: 20, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-        <button onClick={load} style={{ ...secondaryBtnStyle, fontSize: 13 }}>
-          <Icon name="refresh" size={13} />
-          Refresh
-        </button>
-        <button onClick={() => setShowPairModal(true)} style={primaryBtnStyle}>
-          <Icon name="plus" size={14} />
-          Add device
-        </button>
-      </div>
+      <PageHeader
+        eyebrow="Your Sierra system"
+        title="Devices"
+        icon="cpu"
+        actions={
+          <>
+            <button onClick={load} className="btn-int" style={{ ...secondaryBtnStyle, fontSize: 13 }}>
+              <Icon name="refresh" size={13} />
+              Refresh
+            </button>
+            <button onClick={() => setShowPairModal(true)} className="btn-int" style={primaryBtnStyle}>
+              <Icon name="plus" size={14} />
+              Add device
+            </button>
+          </>
+        }
+      />
+      <p style={{ color: 'var(--fg-muted)', fontFamily: 'var(--font-sans)', fontSize: 14, margin: '-8px 0 24px' }}>{summaryLine}</p>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: 60, color: 'var(--fg-muted)', fontFamily: 'var(--font-sans)' }}>Loading…</div>
-      ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {[1, 2, 3, 4].map(i => <Skeleton key={i} height={180} radius={16} />)}
+        </div>
+      ) : (
+        <div className="fade-in-up" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <HubCard device={hub} />
           <LocationCard />
           <SenseCard

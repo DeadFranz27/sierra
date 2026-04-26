@@ -61,6 +61,7 @@ export function Layout({ page, onNavigate, onLogout, children }: Props) {
         <button
           onClick={onLogout}
           title="Sign out"
+          className="icon-btn"
           style={{
             width: 34, height: 34,
             borderRadius: 10,
@@ -117,8 +118,27 @@ export function Layout({ page, onNavigate, onLogout, children }: Props) {
                   fontSize: 14,
                   fontWeight: active ? 600 : 500,
                   textAlign: 'left',
+                  position: 'relative',
+                  transition:
+                    'background var(--dur-base) var(--ease-standard), color var(--dur-base) var(--ease-standard), transform var(--dur-micro) var(--ease-standard)',
                 }}
+                onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--bg-sunken)' }}
+                onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}
+                onMouseDown={e => { e.currentTarget.style.transform = 'scale(.98)' }}
+                onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)' }}
               >
+                <span
+                  aria-hidden
+                  style={{
+                    position: 'absolute',
+                    left: -12, top: '50%',
+                    width: 3, height: active ? 18 : 0,
+                    background: 'var(--accent)',
+                    borderRadius: '0 3px 3px 0',
+                    transform: 'translateY(-50%)',
+                    transition: 'height var(--dur-base) var(--ease-standard)',
+                  }}
+                />
                 <Icon name={icon} size={17} />
                 {label}
               </button>
@@ -127,7 +147,9 @@ export function Layout({ page, onNavigate, onLogout, children }: Props) {
         </nav>
 
         <main style={{ flex: 1, overflowY: 'auto', background: 'var(--bg)' }}>
-          {children}
+          <div key={page} className="fade-in-up" style={{ animationDuration: '320ms' }}>
+            {children}
+          </div>
         </main>
       </div>
     </div>

@@ -5,6 +5,7 @@ import type { Zone } from '../lib/api'
 import { Badge } from '../components/Badge'
 import { Icon } from '../components/Icon'
 import { Modal } from '../components/Modal'
+import { Skeleton } from '../components/Skeleton'
 import { toast } from '../components/Toast'
 
 function moistureTone(v: number): 'warn' | 'good' | 'info' {
@@ -45,9 +46,11 @@ function ZoneRow({ zone, n, latestMoisture, onWater, onSkip, onDelete, onClick }
   return (
     <div
       onClick={() => onClick(zone.id)}
-      style={{ display: 'grid', gridTemplateColumns: '44px 1.3fr .9fr 130px 130px 120px', alignItems: 'center', gap: 16, padding: '14px 20px', borderBottom: '1px solid var(--border)', fontFamily: 'var(--font-sans)', fontSize: 13.5, cursor: 'pointer', transition: 'background 120ms' }}
+      style={{ display: 'grid', gridTemplateColumns: '44px 1.3fr .9fr 130px 130px 120px', alignItems: 'center', gap: 16, padding: '14px 20px', borderBottom: '1px solid var(--border)', fontFamily: 'var(--font-sans)', fontSize: 13.5, cursor: 'pointer', transition: 'background var(--dur-base) var(--ease-standard), transform var(--dur-micro) var(--ease-standard)' }}
       onMouseEnter={e => (e.currentTarget.style.background = 'var(--mist-100)')}
       onMouseLeave={e => (e.currentTarget.style.background = '')}
+      onMouseDown={e => (e.currentTarget.style.transform = 'scale(.997)')}
+      onMouseUp={e => (e.currentTarget.style.transform = 'scale(1)')}
     >
       <div style={{ fontFamily: 'var(--font-mono)', color: 'var(--fg-muted)' }}>{String(n).padStart(2, '0')}</div>
       <div style={{ fontWeight: 600, color: 'var(--fg)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{zone.name}</div>
@@ -183,23 +186,52 @@ export function ZonesScreen({ onSelectZone }: Props) {
           <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--fg-muted)', marginBottom: 6 }}>
             {zones.length} zone{zones.length !== 1 ? 's' : ''} configured
           </div>
-          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 40, color: 'var(--fg-brand)', margin: 0, letterSpacing: '-0.02em' }}>Zones</h1>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 40, color: 'var(--fg-brand)', margin: 0, letterSpacing: '-0.02em', display: 'inline-flex', alignItems: 'center', gap: 14 }}>
+            <span style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--mist-300)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-brand)' }}>
+              <Icon name="sprout" size={22} />
+            </span>
+            Zones
+          </h1>
         </div>
         <button
           onClick={() => setShowAdd(true)}
+          className="btn-int"
           style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '10px 18px', background: 'var(--fg-brand)', color: '#fff', border: 'none', borderRadius: 10, fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 14, cursor: 'pointer', flexShrink: 0 }}
         >
           <Icon name="plus" size={15} /> Add zone
         </button>
       </div>
 
-      {loading && <div style={{ textAlign: 'center', padding: 40, color: 'var(--fg-muted)', fontFamily: 'var(--font-sans)' }}>Loading zones…</div>}
+      {loading && (
+        <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden' }}>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} style={{ display: 'grid', gridTemplateColumns: '44px 1.3fr .9fr 130px 130px 120px', alignItems: 'center', gap: 16, padding: '14px 20px', borderBottom: '1px solid var(--border)' }}>
+              <Skeleton width={20} height={12} />
+              <Skeleton width="70%" height={14} />
+              <Skeleton width="50%" height={12} />
+              <Skeleton height={6} radius={999} />
+              <Skeleton width={90} height={20} radius={999} />
+              <div style={{ display: 'flex', gap: 5, justifyContent: 'flex-end' }}>
+                <Skeleton width={30} height={30} radius={8} />
+                <Skeleton width={30} height={30} radius={8} />
+                <Skeleton width={30} height={30} radius={8} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {!loading && zones.length === 0 && (
-        <div style={{ padding: 40, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 14, textAlign: 'center' }}>
-          <div style={{ color: 'var(--fg-muted)', fontFamily: 'var(--font-sans)', fontSize: 15, marginBottom: 16 }}>No zones yet. Add your first zone to get started.</div>
-          <button onClick={() => setShowAdd(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '10px 18px', background: 'var(--fg-brand)', color: '#fff', border: 'none', borderRadius: 10, fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
-            <Icon name="plus" size={15} /> Add zone
+        <div className="pop-in" style={{ padding: '56px 32px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 16, textAlign: 'center' }}>
+          <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--mist-300)', color: 'var(--fg-brand)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+            <Icon name="sprout" size={28} />
+          </div>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, color: 'var(--fg-brand)', marginBottom: 6 }}>No zones yet</div>
+          <div style={{ color: 'var(--fg-muted)', fontFamily: 'var(--font-sans)', fontSize: 14, marginBottom: 22, maxWidth: 340, margin: '0 auto 22px' }}>
+            A zone groups one valve and one moisture sensor. Add your first to start watering.
+          </div>
+          <button onClick={() => setShowAdd(true)} className="btn-int" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '10px 18px', background: 'var(--fg-brand)', color: '#fff', border: 'none', borderRadius: 10, fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
+            <Icon name="plus" size={15} /> Add your first zone
           </button>
         </div>
       )}

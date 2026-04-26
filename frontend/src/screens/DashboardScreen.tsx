@@ -4,7 +4,8 @@ import type { Zone, Run, HubLocation } from '../lib/api'
 import { Stat } from '../components/Stat'
 import { Sparkline } from '../components/Sparkline'
 import { Icon } from '../components/Icon'
-import { fmtHHMM, fmtRelative, fmtTodayLong, spreadAxisLabels } from '../lib/time'
+import { Skeleton } from '../components/Skeleton'
+import { fmtHHMM, fmtRelative, fmtTodayLong } from '../lib/time'
 
 type WeatherWindow = 24 | 168
 
@@ -125,7 +126,6 @@ export function DashboardScreen({ onNavigate }: Props) {
   const [zones, setZones] = useState<Zone[]>([])
   const [history, setHistory] = useState<number[]>([])
   const [historyLabels, setHistoryLabels] = useState<string[]>([])
-  const [historyAxis, setHistoryAxis] = useState<string[]>([])
   const [recentRuns, setRecentRuns] = useState<(Run & { zoneName: string })[]>([])
   const [loading, setLoading] = useState(true)
   const [weatherPoints, setWeatherPoints] = useState<WeatherPoint[]>([])
@@ -150,7 +150,6 @@ export function DashboardScreen({ onNavigate }: Props) {
           if (mounted) {
             setHistory(hist.map(r => r.value_percent))
             setHistoryLabels(hist.map(r => fmtHHMM(r.timestamp)))
-            setHistoryAxis(spreadAxisLabels(hist.map(r => r.timestamp)))
           }
           const allRuns: (Run & { zoneName: string })[] = []
           for (const z of zs) {
@@ -222,12 +221,17 @@ export function DashboardScreen({ onNavigate }: Props) {
           <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--fg-muted)', marginBottom: 8 }}>
             {todayLabel()}
           </div>
-          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 40, lineHeight: 1.1, color: 'var(--fg-brand)', margin: 0, letterSpacing: '-0.02em' }}>
-            {loading ? 'Loading…' : greeting}
-          </h1>
+          {loading ? (
+            <Skeleton width={420} height={44} radius={10} />
+          ) : (
+            <h1 className="fade-in-up" style={{ fontFamily: 'var(--font-display)', fontSize: 40, lineHeight: 1.1, color: 'var(--fg-brand)', margin: 0, letterSpacing: '-0.02em' }}>
+              {greeting}
+            </h1>
+          )}
         </div>
         <button
           onClick={() => onNavigate('zones')}
+          className="btn-int"
           style={{
             padding: '10px 18px',
             background: 'var(--fg-brand)',
@@ -251,14 +255,14 @@ export function DashboardScreen({ onNavigate }: Props) {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 20 }}>
-        <Stat label="Zones" value={zones.length} sub={`${zones.filter(z => z.active_profile_id).length} with a profile`} />
-        <Stat label="Avg soil" value={history.length > 0 ? history[history.length - 1] : '—'} unit="%" sub="Latest reading" />
-        <Stat label="Profiles" value="—" sub="Plant library" />
-        <Stat label="Status" value="Online" sub="Hub connected" tone="var(--state-good)" />
+        <Stat label="Zones" value={zones.length} sub={`${zones.filter(z => z.active_profile_id).length} with a profile`} icon="sprout" />
+        <Stat label="Avg soil" value={history.length > 0 ? history[history.length - 1] : '—'} unit="%" sub="Latest reading" icon="droplet" />
+        <Stat label="Profiles" value="—" sub="Plant library" icon="leaf" />
+        <Stat label="Status" value="Online" sub="Hub connected" tone="var(--state-good)" icon="cpu" />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 16 }}>
-        <div style={{
+        <div className="lift fade-in-up" style={{
           padding: 20,
           background: 'var(--bg-elevated)',
           border: '1px solid var(--border)',
@@ -279,18 +283,12 @@ export function DashboardScreen({ onNavigate }: Props) {
             )}
           </div>
           {history.length > 0
-            ? <Sparkline data={history} labels={historyLabels} unit="%" />
-            : <div style={{ height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-muted)', fontFamily: 'var(--font-sans)', fontSize: 13 }}>No readings yet</div>
+            ? <Sparkline data={history} labels={historyLabels} height={170} unit="%" />
+            : <div style={{ height: 170, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-muted)', fontFamily: 'var(--font-sans)', fontSize: 13 }}>No readings yet</div>
           }
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fg-muted)', marginTop: 6 }}>
-            {historyAxis.length > 0
-              ? historyAxis.map((label, i) => <span key={i}>{label}</span>)
-              : <><span>—</span><span>—</span><span>—</span><span>—</span><span>now</span></>
-            }
-          </div>
         </div>
 
-        <div style={{
+        <div className="lift fade-in-up" style={{
           padding: 20,
           background: 'var(--bg-elevated)',
           border: '1px solid var(--border)',
@@ -327,7 +325,7 @@ export function DashboardScreen({ onNavigate }: Props) {
       </div>
 
       {/* Weather charts — rain + wind */}
-      <div style={{ marginTop: 16, padding: 20, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 14 }}>
+      <div className="lift fade-in-up" style={{ marginTop: 16, padding: 20, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 14 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
           <div>
             <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--fg-muted)', marginBottom: 2 }}>
@@ -362,7 +360,10 @@ export function DashboardScreen({ onNavigate }: Props) {
         )}
 
         {location && weatherLoading && (
-          <div style={{ height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-muted)', fontFamily: 'var(--font-sans)', fontSize: 13 }}>Loading…</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+            <Skeleton height={80} radius={6} />
+            <Skeleton height={80} radius={6} />
+          </div>
         )}
 
         {location && !weatherLoading && (

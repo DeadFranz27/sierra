@@ -4,7 +4,9 @@ import type { PlantProfile } from '../lib/api'
 import { Icon } from '../components/Icon'
 import { Badge } from '../components/Badge'
 import { Modal } from '../components/Modal'
+import { PageHeader } from '../components/PageHeader'
 import { ProfileForm } from '../components/ProfileForm'
+import { Skeleton } from '../components/Skeleton'
 import { toast } from '../components/Toast'
 import { PlantCategoryIcon } from '../components/PlantCategoryIcon'
 
@@ -34,7 +36,7 @@ function ProfileCard({ profile, onDelete, onFork, onEdit }: {
   onEdit: (p: PlantProfile) => void
 }) {
   return (
-    <div style={{ padding: 20, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div className="lift fade-in-up" style={{ padding: 20, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
@@ -45,15 +47,15 @@ function ProfileCard({ profile, onDelete, onFork, onEdit }: {
         </div>
         <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
           {!profile.is_preset && (
-            <button onClick={() => onEdit(profile)} title="Edit" style={iconBtnStyle}>
+            <button onClick={() => onEdit(profile)} title="Edit" className="icon-btn" style={iconBtnStyle}>
               <Icon name="edit" size={13} />
             </button>
           )}
-          <button onClick={() => onFork(profile)} title="Customise (fork)" style={iconBtnStyle}>
+          <button onClick={() => onFork(profile)} title="Customise (fork)" className="icon-btn" style={iconBtnStyle}>
             <Icon name="plus" size={13} />
           </button>
           {!profile.is_preset && (
-            <button onClick={() => onDelete(profile.id)} title="Delete" style={{ ...iconBtnStyle, color: 'var(--state-bad)' }}>
+            <button onClick={() => onDelete(profile.id)} title="Delete" className="icon-btn" style={{ ...iconBtnStyle, color: 'var(--state-bad)' }}>
               <Icon name="trash" size={13} />
             </button>
           )}
@@ -165,23 +167,28 @@ export function ProfilesScreen() {
         </Modal>
       )}
 
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 20, marginBottom: 24 }}>
-        <div>
-          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--fg-muted)', marginBottom: 6 }}>
-            {profiles.length} profiles available
-          </div>
-          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 40, color: 'var(--fg-brand)', margin: 0, letterSpacing: '-0.02em' }}>Plant library</h1>
-        </div>
-        <button
-          onClick={() => setFormMode({ type: 'create' })}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '10px 18px', background: 'var(--fg-brand)', color: '#fff', border: 'none', borderRadius: 10, fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 14, cursor: 'pointer', flexShrink: 0 }}
-        >
-          <Icon name="plus" size={15} /> New profile
-        </button>
-      </div>
+      <PageHeader
+        eyebrow={`${profiles.length} profiles available`}
+        title="Plant library"
+        icon="leaf"
+        actions={(
+          <button
+            onClick={() => setFormMode({ type: 'create' })}
+            className="btn-int"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '10px 18px', background: 'var(--fg-brand)', color: '#fff', border: 'none', borderRadius: 10, fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 14, cursor: 'pointer', flexShrink: 0 }}
+          >
+            <Icon name="plus" size={15} /> New profile
+          </button>
+        )}
+      />
 
-      {loading && <div style={{ textAlign: 'center', padding: 40, color: 'var(--fg-muted)', fontFamily: 'var(--font-sans)' }}>Loading…</div>}
+      {loading && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 14 }}>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} height={196} radius={14} />
+          ))}
+        </div>
+      )}
 
       {/* Category filter pills */}
       {!loading && categories.length > 0 && (

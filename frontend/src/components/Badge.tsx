@@ -28,15 +28,28 @@ export function Badge({ label, tone = 'neutral', dot = true }: Props) {
       fontFamily: 'var(--font-sans)',
       fontSize: 12,
       fontWeight: 600,
+      animation: 'fadeInScale 220ms var(--ease-standard)',
+      transition: 'background var(--dur-base) var(--ease-standard), color var(--dur-base) var(--ease-standard)',
     }}>
       {dot && (
         <span style={{
+          position: 'relative',
           width: 6,
           height: 6,
           borderRadius: '50%',
           background: s.dot,
           flexShrink: 0,
-        }} />
+        }}>
+          {tone === 'good' && (
+            <span style={{
+              position: 'absolute', inset: -2,
+              borderRadius: '50%',
+              background: s.dot,
+              opacity: 0.35,
+              animation: 'pulseRing 2s var(--ease-standard) infinite',
+            }} />
+          )}
+        </span>
       )}
       {label}
     </span>

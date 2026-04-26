@@ -20,3 +20,116 @@ input[type="range"] {
   outline: none;
   box-shadow: var(--focus-ring);
 }
+
+/* ── Global animation primitives ───────────────────────────────────────── */
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInScale {
+  from { opacity: 0; transform: scale(.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes modalPop {
+  from { opacity: 0; transform: scale(.94) translateY(6px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes drawLine {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes pulseRing {
+  from { transform: scale(1);   opacity: .55; }
+  to   { transform: scale(2.2); opacity: 0; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Honour user's reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+/* ── Utility classes ───────────────────────────────────────────────────── */
+
+.fade-in     { animation: fadeIn      var(--dur-base) var(--ease-standard) both; }
+.fade-in-up  { animation: fadeInUp    var(--dur-base) var(--ease-standard) both; }
+.pop-in      { animation: fadeInScale var(--dur-base) var(--ease-standard) both; }
+
+/* Stagger children by index — apply .stagger > * with --i set inline */
+.stagger > * { animation: fadeInUp var(--dur-base) var(--ease-standard) both; animation-delay: calc(var(--i, 0) * 40ms); }
+
+.skeleton {
+  background:
+    linear-gradient(90deg,
+      var(--stone-100) 0%,
+      var(--stone-200) 50%,
+      var(--stone-100) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+  border-radius: var(--rad-sm);
+}
+
+/* Hover/press for cards & buttons */
+.lift {
+  transition:
+    transform var(--dur-base) var(--ease-standard),
+    box-shadow var(--dur-base) var(--ease-standard),
+    border-color var(--dur-base) var(--ease-standard);
+}
+.lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--elev-2);
+  border-color: var(--border-strong);
+}
+
+.press { transition: transform var(--dur-micro) var(--ease-standard); }
+.press:active { transform: scale(.97); }
+
+/* Standard interactive button — adds hover bg + active press */
+.btn-int {
+  transition:
+    background var(--dur-base) var(--ease-standard),
+    border-color var(--dur-base) var(--ease-standard),
+    color var(--dur-base) var(--ease-standard),
+    transform var(--dur-micro) var(--ease-standard),
+    box-shadow var(--dur-base) var(--ease-standard);
+}
+.btn-int:hover:not(:disabled) { filter: brightness(1.04); }
+.btn-int:active:not(:disabled) { transform: scale(.97); }
+.btn-int:disabled { opacity: .55; cursor: not-allowed; }
+
+/* Icon button square — hover tint */
+.icon-btn {
+  transition: background var(--dur-base) var(--ease-standard), color var(--dur-base) var(--ease-standard), transform var(--dur-micro) var(--ease-standard);
+}
+.icon-btn:hover:not(:disabled) { background: var(--bg-sunken); color: var(--fg); }
+.icon-btn:active:not(:disabled) { transform: scale(.92); }
+
+/* Spinner */
+.spinner {
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid currentColor; border-top-color: transparent;
+  animation: spin .9s linear infinite;
+  display: inline-block;
+}

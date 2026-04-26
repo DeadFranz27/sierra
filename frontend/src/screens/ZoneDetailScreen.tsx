@@ -6,6 +6,7 @@ import { Badge } from '../components/Badge'
 import { Stat } from '../components/Stat'
 import { Icon } from '../components/Icon'
 import { Modal } from '../components/Modal'
+import { Skeleton } from '../components/Skeleton'
 import { toast } from '../components/Toast'
 import { fmtHHMM } from '../lib/time'
 
@@ -169,8 +170,13 @@ export function ZoneDetailScreen({ zoneId, onBack }: Props) {
 
   if (loading || !zone) {
     return (
-      <div style={{ padding: 28, color: 'var(--fg-muted)', fontFamily: 'var(--font-sans)' }}>
-        Loading…
+      <div style={{ padding: 28, maxWidth: 1100, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <Skeleton width={140} height={16} radius={6} />
+        <Skeleton width={320} height={44} radius={10} />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+          {[1, 2, 3, 4].map(i => <Skeleton key={i} height={86} radius={12} />)}
+        </div>
+        <Skeleton height={260} radius={14} />
       </div>
     )
   }
@@ -197,8 +203,9 @@ export function ZoneDetailScreen({ zoneId, onBack }: Props) {
 
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
-        <button onClick={onBack} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-sans)', fontSize: 13, color: 'var(--fg-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: '0 0 10px' }}>
-          ← Back to zones
+        <button onClick={onBack} className="btn-int" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-sans)', fontSize: 13, color: 'var(--fg-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px 4px 4px', borderRadius: 8, marginBottom: 6, marginLeft: -4 }}>
+          <Icon name="chevronRight" size={14} style={{ transform: 'rotate(180deg)' }} />
+          Back to zones
         </button>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 20 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -268,8 +275,8 @@ export function ZoneDetailScreen({ zoneId, onBack }: Props) {
           </div>
         </div>
         {sparkData.length > 1
-          ? <Sparkline data={sparkData} labels={sparkLabels} height={60} unit="%" />
-          : <div style={{ height: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-muted)', fontFamily: 'var(--font-sans)', fontSize: 13 }}>No readings</div>
+          ? <Sparkline data={sparkData} labels={sparkLabels} height={220} unit="%" />
+          : <div style={{ height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-muted)', fontFamily: 'var(--font-sans)', fontSize: 13 }}>No readings</div>
         }
       </div>
 

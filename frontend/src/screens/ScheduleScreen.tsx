@@ -4,6 +4,8 @@ import { api } from '../lib/api'
 import type { Zone, Schedule } from '../lib/api'
 import { Icon } from '../components/Icon'
 import { Modal } from '../components/Modal'
+import { PageHeader } from '../components/PageHeader'
+import { Skeleton } from '../components/Skeleton'
 import { toast } from '../components/Toast'
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -165,24 +167,27 @@ export function ScheduleScreen() {
         <AddScheduleModal zones={zones} onClose={() => setShowAdd(false)} onCreated={handleCreated} />
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 20, marginBottom: 24 }}>
-        <div>
-          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--fg-muted)', marginBottom: 6 }}>
-            Week view
-          </div>
-          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 40, color: 'var(--fg-brand)', margin: 0, letterSpacing: '-0.02em' }}>
-            Schedule
-          </h1>
-        </div>
-        <button
-          onClick={() => setShowAdd(true)}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '10px 18px', background: 'var(--fg-brand)', color: '#fff', border: 'none', borderRadius: 10, fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 14, cursor: 'pointer', flexShrink: 0 }}
-        >
-          <Icon name="plus" size={15} /> Add schedule
-        </button>
-      </div>
+      <PageHeader
+        eyebrow="Week view"
+        title="Schedule"
+        icon="cal"
+        actions={(
+          <button
+            onClick={() => setShowAdd(true)}
+            className="btn-int"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '10px 18px', background: 'var(--fg-brand)', color: '#fff', border: 'none', borderRadius: 10, fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 14, cursor: 'pointer', flexShrink: 0 }}
+          >
+            <Icon name="plus" size={15} /> Add schedule
+          </button>
+        )}
+      />
 
-      {loading && <div style={{ textAlign: 'center', padding: 40, color: 'var(--fg-muted)', fontFamily: 'var(--font-sans)' }}>Loading…</div>}
+      {loading && (
+        <div>
+          <Skeleton height={320} radius={14} style={{ marginBottom: 24 }} />
+          <Skeleton height={180} radius={14} />
+        </div>
+      )}
 
       {!loading && (
         <>
@@ -233,18 +238,25 @@ export function ScheduleScreen() {
                       const t = parseTime(s.time_local)
                       const len = Math.max(s.duration_min / 60, 0.04)
                       return (
-                        <div key={i} style={{
+                        <div key={i} className="pop-in" style={{
                           position: 'absolute', left: 4, right: 4,
                           top: `${(t / 24) * 100}%`,
                           height: `${(len / 24) * 100}%`,
-                          background: 'var(--mist-500)',
+                          background: 'linear-gradient(180deg, var(--mist-500), var(--mist-300))',
                           border: '1px solid var(--moss-300)',
                           borderRadius: 6,
                           padding: '4px 6px',
                           fontSize: 11,
                           color: 'var(--moss-700)',
                           overflow: 'hidden',
-                        }}>
+                          animationDelay: `${(di * 4 + i) * 30}ms`,
+                          transition: 'transform var(--dur-base) var(--ease-standard), box-shadow var(--dur-base) var(--ease-standard)',
+                          cursor: 'default',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.04)'; e.currentTarget.style.boxShadow = 'var(--elev-1)' }}
+                        onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = 'none' }}
+                        title={`${s.zoneName} · ${s.time_local} · ${s.duration_min} min`}
+                        >
                           <b style={{ fontWeight: 600, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.zoneName}</b>
                         </div>
                       )
@@ -273,8 +285,11 @@ export function ScheduleScreen() {
             </div>
 
             {schedules.length === 0 && (
-              <div style={{ padding: 24, textAlign: 'center', color: 'var(--fg-muted)', fontFamily: 'var(--font-sans)', fontSize: 13 }}>
-                No schedules yet.
+              <div className="pop-in" style={{ padding: '40px 24px', textAlign: 'center', color: 'var(--fg-muted)', fontFamily: 'var(--font-sans)', fontSize: 13 }}>
+                <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--mist-300)', color: 'var(--fg-brand)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
+                  <Icon name="cal" size={20} />
+                </div>
+                <div>No schedules yet — add one above.</div>
               </div>
             )}
 
@@ -289,7 +304,11 @@ export function ScheduleScreen() {
                 fontFamily: 'var(--font-sans)',
                 fontSize: 13,
                 opacity: s.enabled ? 1 : 0.5,
-              }}>
+                transition: 'background var(--dur-base) var(--ease-standard), opacity var(--dur-base) var(--ease-standard)',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--mist-100)')}
+              onMouseLeave={e => (e.currentTarget.style.background = '')}
+              >
                 <div style={{ fontWeight: 600 }}>{s.zoneName}</div>
                 <div style={{ color: 'var(--fg-muted)', fontSize: 12 }}>
                   {s.days_of_week.map(d => DAYS[d - 1]).join(', ')}
@@ -301,11 +320,13 @@ export function ScheduleScreen() {
                   <button
                     onClick={() => toggleEnabled(s)}
                     title={s.enabled ? 'Disable' : 'Enable'}
+                    className="icon-btn"
                     style={{ width: 28, height: 28, borderRadius: 7, border: '1px solid var(--border)', background: 'var(--bg-elevated)', cursor: 'pointer', color: s.enabled ? 'var(--state-good)' : 'var(--fg-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   ><Icon name="power" size={13} /></button>
                   <button
                     onClick={() => deleteSchedule(s.id)}
                     title="Delete"
+                    className="icon-btn"
                     style={{ width: 28, height: 28, borderRadius: 7, border: '1px solid var(--border)', background: 'var(--bg-elevated)', cursor: 'pointer', color: 'var(--state-bad)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   ><Icon name="trash" size={13} /></button>
                 </div>

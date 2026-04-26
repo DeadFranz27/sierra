@@ -1,13 +1,16 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { Icon } from './Icon'
 
-type ToastItem = { id: number; message: string; tone: 'good' | 'bad' }
+type ToastItem = { id: number; message: string; tone: 'good' | 'bad'; leaving?: boolean }
 
 let _show: ((msg: string, tone: 'good' | 'bad') => void) | null = null
 
 export function toast(message: string, tone: 'good' | 'bad' = 'good') {
   _show?.(message, tone)
 }
+
+const LIFE_MS = 3000
+const EXIT_MS = 220
 
 export function ToastContainer() {
   const [items, setItems] = useState<ToastItem[]>([])
@@ -16,7 +19,8 @@ export function ToastContainer() {
   const show = useCallback((message: string, tone: 'good' | 'bad') => {
     const id = ++counter.current
     setItems(prev => [...prev, { id, message, tone }])
-    setTimeout(() => setItems(prev => prev.filter(t => t.id !== id)), 3200)
+    setTimeout(() => setItems(prev => prev.map(t => t.id === id ? { ...t, leaving: true } : t)), LIFE_MS)
+    setTimeout(() => setItems(prev => prev.filter(t => t.id !== id)), LIFE_MS + EXIT_MS)
   }, [])
 
   useEffect(() => { _show = show; return () => { _show = null } }, [show])
@@ -37,13 +41,32 @@ export function ToastContainer() {
           fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 500,
           boxShadow: 'var(--elev-3)',
           pointerEvents: 'auto',
-          animation: 'slideIn 180ms var(--ease-standard)',
+          animation: t.leaving
+            ? 'toastOut 220ms var(--ease-standard) forwards'
+            : 'toastIn 280ms var(--ease-standard)',
+          transformOrigin: 'right center',
         }}>
-          <Icon name={t.tone === 'good' ? 'check' : 'warn'} size={15} />
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            width: 22, height: 22, borderRadius: '50%',
+            background: 'rgba(255,255,255,.16)', flexShrink: 0,
+          }}>
+            <Icon name={t.tone === 'good' ? 'check' : 'warn'} size={13} />
+          </span>
           {t.message}
         </div>
       ))}
-      <style>{`@keyframes slideIn { from { opacity:0; transform:translateY(8px) } to { opacity:1; transform:translateY(0) } }`}</style>
+      <style>{`
+        @keyframes toastIn {
+          0%   { opacity: 0; transform: translateX(20px) scale(.92); }
+          60%  { opacity: 1; transform: translateX(-2px) scale(1.01); }
+          100% { opacity: 1; transform: translateX(0) scale(1); }
+        }
+        @keyframes toastOut {
+          from { opacity: 1; transform: translateX(0) scale(1); }
+          to   { opacity: 0; transform: translateX(16px) scale(.96); }
+        }
+      `}</style>
     </div>
   )
 }
