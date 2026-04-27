@@ -13,7 +13,6 @@ enum SierraError: LocalizedError {
     }
 }
 
-@MainActor
 final class SierraClient: ObservableObject, @unchecked Sendable {
     let baseURL: String
     private let username: String
@@ -30,13 +29,27 @@ final class SierraClient: ObservableObject, @unchecked Sendable {
         self.username = username
         self.password = password
         let config = URLSessionConfiguration.default
-        config.httpCookieStorage = HTTPCookieStorage()
+        config.httpCookieStorage = .shared
         config.httpCookieAcceptPolicy = .always
         config.httpShouldSetCookies = true
         self.session = URLSession(configuration: config)
     }
 
+    /// Probe a server URL without credentials — used by ConnectView to detect first-run state.
+    static func probeAuthStatus(baseURL: String) async throws -> AuthStatus {
+        let probe = SierraClient(baseURL: baseURL, username: "", password: "")
+        return try await probe.authStatus()
+    }
+
     // MARK: - Auth
+
+    func authStatus() async throws -> AuthStatus {
+        try await get("/api/auth/status")
+    }
+
+    func setupAccount(username: String, password: String) async throws {
+        _ = try await post("/api/auth/setup", body: SetupRequest(username: username, password: password), response: AnyCodable.self)
+    }
 
     func login() async throws {
         struct Body: Encodable { let username, password: String }
@@ -134,7 +147,44 @@ final class SierraClient: ObservableObject, @unchecked Sendable {
     // MARK: - Device
 
     func devices() async throws -> [Device] {
-        try await get("/api/device/status")
+        try await get("/api/devices")
+    }
+
+    func deviceCandidates(kind: String? = nil) async throws -> [DeviceCandidate] {
+        let path = kind.map { "/api/devices/candidates?kind=\($0)" } ?? "/api/devices/candidates"
+        return try await get(path)
+    }
+
+    func pairDevice(deviceId: String? = nil, ip: String? = nil, pairingCode: String? = nil) async throws -> PairResponse {
+        try await post("/api/devices/pair",
+                       body: PairRequest(pairing_code: pairingCode, device_id: deviceId, ip: ip),
+                       response: PairResponse.self)
+    }
+
+    func updateDevice(_ id: String, name: String? = nil, errorFlag: Bool? = nil, errorMessage: String? = nil) async throws -> Device {
+        try await patch("/api/devices/\(id)",
+                        body: DeviceUpdate(name: name, error_flag: errorFlag, error_message: errorMessage),
+                        response: Device.self)
+    }
+
+    func restartDevice(_ id: String) async throws {
+        try await postEmpty("/api/devices/\(id)/restart")
+    }
+
+    func clearDeviceError(_ id: String) async throws {
+        try await postEmpty("/api/devices/\(id)/clear-error")
+    }
+
+    func unpairDevice(_ id: String) async throws {
+        try await postEmpty("/api/devices/\(id)/unpair")
+    }
+
+    func factoryResetDevice(_ id: String) async throws {
+        try await postEmpty("/api/devices/\(id)/factory-reset")
+    }
+
+    func reprovisionWifi(_ id: String) async throws {
+        try await postEmpty("/api/devices/\(id)/reprovision-wifi")
     }
 
     // MARK: - Settings
@@ -145,6 +195,24 @@ final class SierraClient: ObservableObject, @unchecked Sendable {
 
     func setLocation(_ loc: HubLocation) async throws -> HubLocation {
         try await put("/api/settings/location", body: loc, response: HubLocation.self)
+    }
+
+    // MARK: - Onboarding
+
+    func onboardingProgress() async throws -> OnboardingProgress {
+        try await get("/api/onboarding/progress")
+    }
+
+    func saveOnboardingProgress(step: Int, snapshot: WizardSnapshot?) async throws -> OnboardingProgress {
+        try await post(
+            "/api/onboarding/progress",
+            body: OnboardingProgressUpdate(current_step: step, state_snapshot: snapshot),
+            response: OnboardingProgress.self
+        )
+    }
+
+    func completeOnboarding() async throws -> OnboardingProgress {
+        try await post("/api/onboarding/complete", body: EmptyBody(), response: OnboardingProgress.self)
     }
 
     // MARK: - Open-Meteo geocoding (no auth needed)
@@ -160,7 +228,7 @@ final class SierraClient: ObservableObject, @unchecked Sendable {
 
     func fetchWeather(lat: Double, lon: Double, hours: Int) async throws -> [WeatherPoint] {
         let days = hours <= 24 ? 1 : 7
-        guard let url = URL(string: "https://api.open-meteo.com/v1/forecast?latitude=\(lat)&longitude=\(lon)&hourly=precipitation,wind_speed_10m&forecast_days=\(days)&past_days=\(days)&timezone=auto") else { return [] }
+        guard let url = URL(string: "https://api.open-meteo.com/v1/forecast?latitude=\(lat)&longitude=\(lon)&hourly=precipitation,wind_speed_10m,temperature_2m,weather_code,is_day&forecast_days=\(days)&past_days=\(days)&timezone=auto") else { return [] }
         let (data, _) = try await URLSession.shared.data(from: url)
         let json = try JSONDecoder().decode(OpenMeteoResponse.self, from: data)
         let now = Date()
@@ -178,11 +246,17 @@ final class SierraClient: ObservableObject, @unchecked Sendable {
             let label = hours <= 24
                 ? ts.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute(.twoDigits))
                 : ts.formatted(.dateTime.weekday(.abbreviated).day())
+            let temp = json.hourly.temperature_2m?[safe: i] ?? nil
+            let code = json.hourly.weather_code?[safe: i] ?? nil
+            let dayFlag: Bool? = (json.hourly.is_day?[safe: i] ?? nil).map { $0 == 1 }
             points.append(WeatherPoint(
                 label: label,
                 timestamp: ts,
                 rain: json.hourly.precipitation[safe: i] ?? 0,
-                wind: json.hourly.wind_speed_10m[safe: i] ?? 0
+                wind: json.hourly.wind_speed_10m[safe: i] ?? 0,
+                temperatureC: temp,
+                weatherCode: code,
+                isDay: dayFlag
             ))
         }
 
@@ -277,6 +351,9 @@ private struct OpenMeteoResponse: Decodable {
         let time: [String]
         let precipitation: [Double]
         let wind_speed_10m: [Double]
+        let temperature_2m: [Double?]?
+        let weather_code: [Int?]?
+        let is_day: [Int?]?
     }
     let hourly: Hourly
 }

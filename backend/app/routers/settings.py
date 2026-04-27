@@ -49,6 +49,9 @@ class WeatherHistoryPoint(BaseModel):
     time: str
     precipitation_mm: float
     wind_kmh: float
+    temperature_c: float | None = None
+    weather_code: int | None = None
+    is_day: bool | None = None
 
 
 class WeatherHistoryOut(BaseModel):
@@ -181,7 +184,7 @@ async def weather_history(
                 params={
                     "latitude": lat,
                     "longitude": lon,
-                    "hourly": "precipitation,wind_speed_10m",
+                    "hourly": "precipitation,wind_speed_10m,temperature_2m,weather_code,is_day",
                     "forecast_days": days,
                     "past_days": days,
                     "timezone": "auto",
@@ -203,12 +206,19 @@ async def weather_history(
     times = hourly.get("time") or []
     precip = hourly.get("precipitation") or []
     wind = hourly.get("wind_speed_10m") or []
+    temp = hourly.get("temperature_2m") or []
+    code = hourly.get("weather_code") or []
+    is_day = hourly.get("is_day") or []
+    n = min(len(times), len(precip), len(wind))
     points = [
         WeatherHistoryPoint(
             time=str(times[i]),
             precipitation_mm=float(precip[i]) if i < len(precip) and precip[i] is not None else 0.0,
             wind_kmh=float(wind[i]) if i < len(wind) and wind[i] is not None else 0.0,
+            temperature_c=float(temp[i]) if i < len(temp) and temp[i] is not None else None,
+            weather_code=int(code[i]) if i < len(code) and code[i] is not None else None,
+            is_day=bool(is_day[i]) if i < len(is_day) and is_day[i] is not None else None,
         )
-        for i in range(min(len(times), len(precip), len(wind)))
+        for i in range(n)
     ]
     return WeatherHistoryOut(points=points)

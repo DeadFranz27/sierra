@@ -242,7 +242,7 @@ export const api = {
         `/api/settings/geocode?q=${encodeURIComponent(q)}`,
       ),
     weatherHistory: (windowHours: 24 | 168) =>
-      request<{ points: Array<{ time: string; precipitation_mm: number; wind_kmh: number }> }>(
+      request<{ points: Array<{ time: string; precipitation_mm: number; wind_kmh: number; temperature_c?: number | null; weather_code?: number | null; is_day?: boolean | null }> }>(
         `/api/settings/weather-history?window=${windowHours}`,
       ),
   },

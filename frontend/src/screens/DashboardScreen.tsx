@@ -5,11 +5,21 @@ import { Stat } from '../components/Stat'
 import { Sparkline } from '../components/Sparkline'
 import { Icon } from '../components/Icon'
 import { Skeleton } from '../components/Skeleton'
+import { WeatherIcon } from '../components/WeatherIcon'
 import { fmtHHMM, fmtRelative, fmtTodayLong } from '../lib/time'
+import { deriveCondition, pickMotto } from '../lib/weather'
 
 type WeatherWindow = 24 | 168
 
-type WeatherPoint = { label: string; mm: number; wind: number }
+type WeatherPoint = {
+  label: string
+  mm: number
+  wind: number
+  ts?: number
+  tempC?: number | null
+  code?: number | null
+  isDay?: boolean | null
+}
 
 async function fetchWeatherHistory(hours: WeatherWindow): Promise<WeatherPoint[]> {
   const data = await api.settings.weatherHistory(hours)
@@ -24,7 +34,15 @@ async function fetchWeatherHistory(hours: WeatherWindow): Promise<WeatherPoint[]
     const label = hours === 24
       ? fmtHHMM(d)
       : d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })
-    points.push({ label, mm: p.precipitation_mm, wind: p.wind_kmh })
+    points.push({
+      label,
+      mm: p.precipitation_mm,
+      wind: p.wind_kmh,
+      ts,
+      tempC: p.temperature_c ?? null,
+      code: p.weather_code ?? null,
+      isDay: p.is_day ?? null,
+    })
   }
 
   if (hours === 168) {
@@ -178,19 +196,31 @@ export function DashboardScreen({ onNavigate }: Props) {
 
   const primaryZone = zones[0]
 
-  function weatherMotto(): string {
-    if (!location || weatherPoints.length === 0) return 'Your garden awaits.'
-    const recentRain = weatherPoints.slice(-3).reduce((s, p) => s + p.mm, 0)
-    const latestWind = weatherPoints[weatherPoints.length - 1]?.wind ?? 0
-    const totalRain = weatherPoints.reduce((s, p) => s + p.mm, 0)
-    if (recentRain >= 3) return 'Rain is falling — the garden is drinking.'
-    if (totalRain >= 1) return 'A little rain has visited today.'
-    if (latestWind >= 40) return 'Strong winds — keep an eye on the garden.'
-    if (latestWind >= 20) return 'A breeze is blowing through the garden.'
-    return 'Dry and calm — a good day to water.'
-  }
-
-  const greeting = weatherMotto()
+  // v2.0 weather state — derive condition from current-hour Open-Meteo data,
+  // pick a motto that rotates 3× per day so it doesn't feel static.
+  const hourlyPoints = weatherPoints.filter(p => p.ts != null)
+  const now = Date.now()
+  const currentPoint = hourlyPoints
+    .filter(p => (p.ts ?? 0) <= now)
+    .sort((a, b) => (b.ts ?? 0) - (a.ts ?? 0))[0]
+  const past24 = hourlyPoints.filter(p => (p.ts ?? 0) >= now - 24 * 3600 * 1000)
+  const precip24h = past24.reduce((s, p) => s + (p.mm || 0), 0)
+  const tempsToday = past24.map(p => p.tempC).filter((t): t is number => t != null)
+  const condition = location
+    ? deriveCondition({
+        weatherCode: currentPoint?.code ?? null,
+        isDay: currentPoint?.isDay ?? null,
+        temperatureC: currentPoint?.tempC ?? null,
+        tempMinC: tempsToday.length ? Math.min(...tempsToday) : null,
+        tempMaxC: tempsToday.length ? Math.max(...tempsToday) : null,
+        windKmh: currentPoint?.wind ?? null,
+        precip24hMm: precip24h,
+        precipNextMm: currentPoint?.mm ?? null,
+      })
+    : null
+  const greeting = location && condition
+    ? pickMotto(condition)
+    : 'Your garden awaits.'
 
   return (
     <div style={{ padding: 28, maxWidth: 1100 }}>
@@ -224,9 +254,16 @@ export function DashboardScreen({ onNavigate }: Props) {
           {loading ? (
             <Skeleton width={420} height={44} radius={10} />
           ) : (
-            <h1 className="fade-in-up" style={{ fontFamily: 'var(--font-display)', fontSize: 40, lineHeight: 1.1, color: 'var(--fg-brand)', margin: 0, letterSpacing: '-0.02em' }}>
-              {greeting}
-            </h1>
+            <div className="fade-in-up" style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
+              {condition && (
+                <div style={{ flexShrink: 0 }}>
+                  <WeatherIcon state={condition} size={48} />
+                </div>
+              )}
+              <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 28, lineHeight: 1.1, color: 'var(--fg-brand)', margin: 0, letterSpacing: '-0.02em', fontStyle: 'italic' }}>
+                {greeting}
+              </h1>
+            </div>
           )}
         </div>
         <button
