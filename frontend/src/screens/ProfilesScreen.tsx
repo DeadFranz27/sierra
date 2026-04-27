@@ -9,6 +9,7 @@ import { ProfileForm } from '../components/ProfileForm'
 import { Skeleton } from '../components/Skeleton'
 import { toast } from '../components/Toast'
 import { PlantCategoryIcon } from '../components/PlantCategoryIcon'
+import { PlantPresetIcon, hasPresetIcon } from '../components/PlantPresetIcon'
 
 type FormMode = { type: 'create' } | { type: 'fork'; from: PlantProfile } | { type: 'edit'; profile: PlantProfile }
 
@@ -37,7 +38,17 @@ function ProfileCard({ profile, onDelete, onFork, onEdit }: {
 }) {
   return (
     <div className="lift fade-in-up" style={{ padding: 20, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+        {hasPresetIcon(profile.preset_key) && (
+          <div style={{
+            width: 48, height: 48, borderRadius: 'var(--rad-md)',
+            background: 'var(--mist-300)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+            <PlantPresetIcon presetKey={profile.preset_key} size={36} alt={profile.name} />
+          </div>
+        )}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
             <div style={{ fontWeight: 600, fontFamily: 'var(--font-sans)', fontSize: 15, color: 'var(--fg)' }}>{profile.name}</div>
