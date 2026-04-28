@@ -137,13 +137,27 @@ struct DashboardView: View {
         }
     }
 
-    // v2.0 hero: eyebrow date + animated weather icon left of italic Instrument Serif motto.
-    // Hub badge sits as a trailing accessory so we don't lose the online affordance.
+    // v2.5 ambient sky hero: gradient panel keyed off the current weather palette,
+    // with drifting orbs, eyebrow row, italic Instrument Serif motto, mini stat strip
+    // and a glass "Run a zone" CTA. Hub badge stays as a trailing accessory above.
     private var weatherHero: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        let palette = WeatherPalettes.palette(for: weatherCondition ?? .partly_cloudy)
+        let conditionLabel = (weatherCondition ?? .partly_cloudy)
+            .rawValue
+            .replacingOccurrences(of: "_", with: " ")
+            .capitalized
+        let currentTemp = weatherPoints
+            .filter { $0.timestamp <= Date() }
+            .max(by: { $0.timestamp < $1.timestamp })?
+            .temperatureC
+        let avgSoil = soilHistory.last.map { Int($0.value_percent) }
+        let zonesWithProfile = zones.filter { $0.active_profile_id != nil }.count
+
+        return VStack(alignment: .leading, spacing: 0) {
+            // Hub status badge sits above the sky panel — keeps the affordance
+            // without fighting the gradient hierarchy.
             HStack {
-                Text(dateString.uppercased()).sierraText(.eyebrow)
-                Spacer(minLength: Sierra.Space.s3)
+                Spacer()
                 if let h = hub {
                     Badge(label: hubLabel(h.status),
                           tone: hubTone(h.status),
@@ -152,20 +166,164 @@ struct DashboardView: View {
                     Badge(label: "Offline", tone: .neutral)
                 }
             }
-            HStack(alignment: .center, spacing: 14) {
-                if let cond = weatherCondition, !isLoading {
-                    WeatherIcon(state: cond, size: 48)
+            .padding(.bottom, Sierra.Space.s2)
+
+            ZStack {
+                // Gradient sky
+                LinearGradient(
+                    stops: [
+                        .init(color: palette.sky[0], location: 0.0),
+                        .init(color: palette.sky[1], location: 0.48),
+                        .init(color: palette.sky[2], location: 1.0),
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+
+                // Drifting orbs
+                TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { ctx in
+                    let t = ctx.date.timeIntervalSinceReferenceDate
+                    Canvas { gctx, size in
+                        let phaseA = sin(t / 9.0) // ~18s full cycle
+                        let phaseB = sin(t / 11.0) // ~22s
+                        let phaseC = sin(t / 13.0) // ~26s
+
+                        gctx.fill(
+                            Path(ellipseIn: CGRect(
+                                x: size.width - 170 + phaseA * 14,
+                                y: -100 + phaseA * 8,
+                                width: 340, height: 340
+                            )),
+                            with: .color(palette.sky[0].opacity(0.55))
+                        )
+                        gctx.fill(
+                            Path(ellipseIn: CGRect(
+                                x: -130 + phaseB * -12,
+                                y: size.height - 80 + phaseB * -10,
+                                width: 380, height: 380
+                            )),
+                            with: .color(palette.sky[2].opacity(0.5))
+                        )
+                        gctx.fill(
+                            Path(ellipseIn: CGRect(
+                                x: size.width * 0.35 + phaseC * 14,
+                                y: size.height * 0.3 + phaseC * 8,
+                                width: 220, height: 220
+                            )),
+                            with: .color(.white.opacity(0.4))
+                        )
+                    }
+                    .blur(radius: 40)
                 }
-                Text(isLoading ? "Loading…" : motto)
-                    .font(.display(Sierra.TextSize.xl2, italic: true))
-                    .tracking(Sierra.TextSize.xl2 * Sierra.Tracking.tight)
-                    .foregroundStyle(Sierra.Color.fgBrand)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                Spacer(minLength: 0)
+                .allowsHitTesting(false)
+
+                // Foreground content
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack(alignment: .center, spacing: Sierra.Space.s4) {
+                        if let cond = weatherCondition, !isLoading {
+                            WeatherIcon(state: cond, size: 88)
+                                .shadow(color: palette.isDarkSky ? .black.opacity(0.25) : .clear,
+                                        radius: 6, x: 0, y: 2)
+                        } else {
+                            WeatherIcon(state: .partly_cloudy, size: 88)
+                                .opacity(isLoading ? 0.6 : 1)
+                        }
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(eyebrowLine(condition: conditionLabel, tempC: currentTemp))
+                                .font(.manrope(11, weight: .semibold))
+                                .tracking(11 * 0.14)
+                                .textCase(.uppercase)
+                                .foregroundStyle(palette.fg.opacity(0.7))
+                                .lineLimit(1)
+                            Text(isLoading ? "Loading…" : motto)
+                                .font(.display(34, italic: true))
+                                .tracking(34 * Sierra.Tracking.tight)
+                                .foregroundStyle(palette.fg)
+                                .lineLimit(2)
+                                .multilineTextAlignment(.leading)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        Spacer(minLength: 0)
+                    }
+
+                    // Mini stat strip
+                    HStack(spacing: 14) {
+                        miniStat(
+                            value: avgSoil != nil ? "\(avgSoil!)%" : "—",
+                            label: "avg soil",
+                            fg: palette.fg
+                        )
+                        Text("·").foregroundStyle(palette.fg.opacity(0.4))
+                        miniStat(
+                            value: "\(zones.count)",
+                            label: "zones",
+                            fg: palette.fg
+                        )
+                        Text("·").foregroundStyle(palette.fg.opacity(0.4))
+                        miniStat(
+                            value: "\(zonesWithProfile)",
+                            label: "with profile",
+                            fg: palette.fg
+                        )
+                        Spacer(minLength: 0)
+                    }
+                    .font(.manrope(12.5))
+
+                    // Glass CTA
+                    Button {
+                        // Hook up to a navigation action when ready.
+                    } label: {
+                        HStack(spacing: 8) {
+                            SierraIcon.play.image(size: 14)
+                            Text("Run a zone")
+                                .font(.manrope(14, weight: .semibold))
+                        }
+                        .foregroundStyle(palette.fg)
+                        .padding(.horizontal, Sierra.Space.s5)
+                        .padding(.vertical, Sierra.Space.s3)
+                        .frame(maxWidth: .infinity)
+                        .background(
+                            RoundedRectangle(cornerRadius: Sierra.Radius.md, style: .continuous)
+                                .fill(palette.isDarkSky
+                                      ? Color.white.opacity(0.16)
+                                      : Color.white.opacity(0.55))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Sierra.Radius.md, style: .continuous)
+                                .strokeBorder(
+                                    palette.isDarkSky
+                                        ? Color.white.opacity(0.28)
+                                        : Color.black.opacity(0.08),
+                                    lineWidth: 1
+                                )
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 22)
+                .padding(.vertical, 22)
             }
+            .clipShape(RoundedRectangle(cornerRadius: Sierra.Radius.xl, style: .continuous))
+            .shadow(color: palette.shadow, radius: 22, x: 0, y: 18)
         }
         .padding(.bottom, Sierra.Space.s4)
+    }
+
+    private func miniStat(value: String, label: String, fg: Color) -> some View {
+        HStack(spacing: 4) {
+            Text(value)
+                .font(.manrope(12.5, weight: .bold))
+                .foregroundStyle(fg)
+            Text(label)
+                .foregroundStyle(fg.opacity(0.7))
+        }
+    }
+
+    private func eyebrowLine(condition: String, tempC: Double?) -> String {
+        var parts = [dateString, condition]
+        if let t = tempC { parts.append("\(Int(t.rounded())) °C") }
+        return parts.joined(separator: " · ")
     }
 
     private var privacyBanner: some View {

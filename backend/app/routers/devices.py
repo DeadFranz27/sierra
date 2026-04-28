@@ -8,6 +8,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import secrets
+import time
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -51,11 +52,39 @@ def _as_utc(dt: datetime) -> datetime:
 # Wi-Fi blips without flapping.
 DEVICE_ONLINE_WINDOW_SECONDS = 90
 
+# The hub IS the box this backend runs on, so MQTT-based liveness is circular.
+# Instead we probe the only external dependency the product needs at runtime
+# (Open-Meteo) and surface that as the hub's online state. Cached so dashboard
+# polling can't hammer the upstream.
+HUB_PROBE_URL = "https://api.open-meteo.com/v1/forecast?latitude=0&longitude=0&hourly=temperature_2m&forecast_days=1"
+HUB_PROBE_TTL_SECONDS = 60
+HUB_PROBE_TIMEOUT = 4.0
 
-def _to_device_out(device: Device) -> DeviceOut:
+_hub_probe_cache: tuple[float, bool] | None = None
+
+
+async def _hub_internet_ok() -> bool:
+    global _hub_probe_cache
+    now = time.monotonic()
+    if _hub_probe_cache is not None and (now - _hub_probe_cache[0]) < HUB_PROBE_TTL_SECONDS:
+        return _hub_probe_cache[1]
+    ok = False
+    try:
+        async with httpx.AsyncClient(timeout=HUB_PROBE_TIMEOUT) as client:
+            r = await client.get(HUB_PROBE_URL)
+            ok = 200 <= r.status_code < 300
+    except Exception:
+        ok = False
+    _hub_probe_cache = (now, ok)
+    return ok
+
+
+async def _to_device_out(device: Device) -> DeviceOut:
     item = DeviceOut.model_validate(device)
     if device.error_flag:
         item.status = "error"
+    elif device.kind == "hub":
+        item.status = "online" if await _hub_internet_ok() else "offline"
     elif device.last_seen is None:
         item.status = "offline"
     else:
@@ -126,7 +155,7 @@ async def list_devices(
     devices = result.scalars().all()
     out = []
     for d in devices:
-        item = _to_device_out(d)
+        item = await _to_device_out(d)
         if d.kind in ("hub", "valve"):
             item.valve_state = get_valve_state()
         out.append(item)
@@ -244,7 +273,7 @@ async def get_device(
     _: str = Depends(get_current_user),
 ):
     device = await _get_device_or_404(db, device_id)
-    item = _to_device_out(device)
+    item = await _to_device_out(device)
     if device.kind in ("hub", "valve"):
         item.valve_state = get_valve_state()
     return item
@@ -279,7 +308,7 @@ async def update_device(
                        target_type="device", target_id=device.id,
                        device_id=device.id,
                        details={k: v for k, v in body.model_dump(exclude_none=True).items()})
-    item = _to_device_out(device)
+    item = await _to_device_out(device)
     if device.kind in ("hub", "valve"):
         item.valve_state = get_valve_state()
     return item
@@ -425,7 +454,7 @@ async def pair_device(
                        details={"mac": mac, "kind": kind, "method": device.pairing_method})
 
     log.info("Device paired: %s %s (%s)", kind, mac, device.id)
-    return PairResponse(device=_to_device_out(device), message="Device paired successfully")
+    return PairResponse(device=await _to_device_out(device), message="Device paired successfully")
 
 
 # ---------------------------------------------------------------------------

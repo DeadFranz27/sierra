@@ -9,15 +9,16 @@ type Props = {
   sub?: string
   tone?: string
   icon?: IconName
+  tint?: string
 }
 
-export function Stat({ label, value, unit, sub, tone, icon }: Props) {
+export function Stat({ label, value, unit, sub, tone, icon, tint }: Props) {
   return (
     <div
       className="lift fade-in-up"
       style={{
         padding: 18,
-        background: 'var(--bg-elevated)',
+        background: tint ?? 'var(--bg-elevated)',
         border: '1px solid var(--border)',
         borderRadius: 14,
         position: 'relative',

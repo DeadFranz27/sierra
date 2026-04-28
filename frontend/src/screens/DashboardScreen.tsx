@@ -8,6 +8,7 @@ import { Skeleton } from '../components/Skeleton'
 import { WeatherIcon } from '../components/WeatherIcon'
 import { fmtHHMM, fmtRelative, fmtTodayLong } from '../lib/time'
 import { deriveCondition, pickMotto } from '../lib/weather'
+import { WEATHER_PALETTES } from '../lib/weatherPalettes'
 
 type WeatherWindow = 24 | 168
 
@@ -222,13 +223,25 @@ export function DashboardScreen({ onNavigate }: Props) {
     ? pickMotto(condition)
     : 'Your garden awaits.'
 
+  const palette = WEATHER_PALETTES[condition ?? 'partly_cloudy']
+  const skyGradient = `linear-gradient(155deg, ${palette.sky[0]} 0%, ${palette.sky[1]} 48%, ${palette.sky[2]} 100%)`
+  const cardTint = `linear-gradient(${palette.cardTint}, ${palette.cardTint}), var(--bg-elevated)`
+  const ctaBg = palette.fg === '#FFFFFF' ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.55)'
+  const ctaBorder = palette.fg === '#FFFFFF' ? 'rgba(255,255,255,0.28)' : 'rgba(0,0,0,0.08)'
+  const conditionLabel = condition
+    ? condition.replace(/_/g, ' ').replace(/^./, c => c.toUpperCase())
+    : 'Partly cloudy'
+  const currentTempC = currentPoint?.tempC
+  const avgSoilPct = history.length > 0 ? Math.round(history[history.length - 1]) : null
+  const nextRunLabel = recentRuns[0]?.zoneName ?? '—'
+
   return (
     <div style={{ padding: 28, maxWidth: 1100 }}>
       <div style={{
         display: 'flex',
         alignItems: 'center',
         gap: 12,
-        marginBottom: 20,
+        marginBottom: 22,
         padding: '12px 16px',
         background: 'var(--mist-300)',
         border: '1px solid var(--moss-200)',
@@ -246,56 +259,80 @@ export function DashboardScreen({ onNavigate }: Props) {
         </div>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 20, marginBottom: 28 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--fg-muted)', marginBottom: 8 }}>
-            {todayLabel()}
-          </div>
-          {loading ? (
-            <Skeleton width={420} height={44} radius={10} />
-          ) : (
-            <div className="fade-in-up" style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
-              {condition && (
-                <div style={{ flexShrink: 0 }}>
-                  <WeatherIcon state={condition} size={48} />
-                </div>
-              )}
-              <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 28, lineHeight: 1.1, color: 'var(--fg-brand)', margin: 0, letterSpacing: '-0.02em', fontStyle: 'italic' }}>
-                {greeting}
-              </h1>
-            </div>
-          )}
+      {/* Ambient sky hero — gradient + animated orbs + motto + mini stats */}
+      <div style={{
+        position: 'relative',
+        background: skyGradient,
+        borderRadius: 20,
+        padding: '34px 36px 30px',
+        marginBottom: 22,
+        overflow: 'hidden',
+        boxShadow: `0 18px 40px -22px ${palette.shadow}, 0 1px 0 rgba(255,255,255,0.4) inset`,
+        transition: 'background 600ms ease',
+      }}>
+        <div aria-hidden style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+          <div style={{ position: 'absolute', top: '-30%', right: '-8%', width: 340, height: 340, borderRadius: '50%', background: `radial-gradient(circle at 30% 30%, ${palette.sky[0]}, transparent 65%)`, opacity: 0.55, animation: 'sw-orb-a 18s ease-in-out infinite' }} />
+          <div style={{ position: 'absolute', bottom: '-40%', left: '-12%', width: 380, height: 380, borderRadius: '50%', background: `radial-gradient(circle at 60% 40%, ${palette.sky[2]}, transparent 65%)`, opacity: 0.5, animation: 'sw-orb-b 22s ease-in-out infinite' }} />
+          <div style={{ position: 'absolute', top: '40%', left: '45%', width: 220, height: 220, borderRadius: '50%', background: 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.55), transparent 65%)', opacity: 0.4, animation: 'sw-orb-a 26s ease-in-out infinite reverse' }} />
         </div>
-        <button
-          onClick={() => onNavigate('zones')}
-          className="btn-int"
-          style={{
-            padding: '10px 18px',
-            background: 'var(--fg-brand)',
-            color: '#fff',
-            border: 'none',
-            borderRadius: 10,
-            fontFamily: 'var(--font-sans)',
-            fontWeight: 600,
-            fontSize: 14,
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 8,
-            flexShrink: 0,
-            whiteSpace: 'nowrap',
-          }}
-        >
-          <Icon name="play" size={14} />
-          Run a zone
-        </button>
+
+        <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: '1fr auto', gap: 24, alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 24, minWidth: 0 }}>
+            <div style={{ flexShrink: 0, filter: palette.fg === '#FFFFFF' ? 'drop-shadow(0 2px 6px rgba(0,0,0,.25))' : 'none' }}>
+              {condition && <WeatherIcon state={condition} size={108} />}
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, letterSpacing: '.14em', textTransform: 'uppercase', color: palette.fg, opacity: 0.7, marginBottom: 6 }}>
+                {todayLabel()} · {conditionLabel}{currentTempC != null ? ` · ${Math.round(currentTempC)} °C` : ''}
+              </div>
+              {loading ? (
+                <Skeleton width={420} height={48} radius={10} />
+              ) : (
+                <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 46, lineHeight: 1.05, color: palette.fg, margin: 0, letterSpacing: '-0.02em', fontStyle: 'italic', textWrap: 'balance' }}>
+                  {greeting}
+                </h1>
+              )}
+              <div style={{ display: 'flex', gap: 18, marginTop: 14, fontFamily: 'var(--font-sans)', fontSize: 12.5, color: palette.fg, opacity: 0.85 }}>
+                <span><b style={{ fontWeight: 700 }}>{avgSoilPct != null ? `${avgSoilPct}%` : '—'}</b><span style={{ opacity: 0.7 }}> avg soil</span></span>
+                <span style={{ opacity: 0.4 }}>·</span>
+                <span><b style={{ fontWeight: 700 }}>{zones.length}</b><span style={{ opacity: 0.7 }}> zones</span></span>
+                <span style={{ opacity: 0.4 }}>·</span>
+                <span><b style={{ fontWeight: 700 }}>{nextRunLabel}</b><span style={{ opacity: 0.7 }}> last run</span></span>
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => onNavigate('zones')}
+            style={{
+              padding: '12px 20px',
+              background: ctaBg,
+              color: palette.fg,
+              border: `1px solid ${ctaBorder}`,
+              borderRadius: 12,
+              fontFamily: 'var(--font-sans)',
+              fontWeight: 600,
+              fontSize: 14,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              flexShrink: 0,
+              whiteSpace: 'nowrap',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+            }}
+          >
+            <Icon name="play" size={14} />
+            Run a zone
+          </button>
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 20 }}>
-        <Stat label="Zones" value={zones.length} sub={`${zones.filter(z => z.active_profile_id).length} with a profile`} icon="sprout" />
-        <Stat label="Avg soil" value={history.length > 0 ? history[history.length - 1] : '—'} unit="%" sub="Latest reading" icon="droplet" />
-        <Stat label="Profiles" value="—" sub="Plant library" icon="leaf" />
-        <Stat label="Status" value="Online" sub="Hub connected" tone="var(--state-good)" icon="cpu" />
+        <Stat label="Zones" value={zones.length} sub={`${zones.filter(z => z.active_profile_id).length} with a profile`} icon="sprout" tint={cardTint} />
+        <Stat label="Avg soil" value={history.length > 0 ? history[history.length - 1] : '—'} unit="%" sub="Latest reading" icon="droplet" tint={cardTint} />
+        <Stat label="Profiles" value="—" sub="Plant library" icon="leaf" tint={cardTint} />
+        <Stat label="Status" value="Online" sub="Hub connected" tone="var(--state-good)" icon="cpu" tint={cardTint} />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 16 }}>
